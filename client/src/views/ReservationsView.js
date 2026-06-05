@@ -1,44 +1,46 @@
 import { 
   apiFetchReservations, 
-  apiFetchWorkspaces, 
+  apiFetchMovies, 
   apiCreateReservation, 
   apiUpdateReservation, 
-  apiPatchReservation, 
-  apiDeleteReservation 
+  apiDeleteReservation,
+  apiUpdateMovie
 } from '../services/api.js';
 import { getCurrentUser } from '../guards/auth.js';
 import { showToast } from '../components/Toast.js';
-import { showModal, showConfirmModal } from '../components/Modal.js';
-import { formatDate, isTodayOrFuture } from '../utils/helpers.js';
-import { checkReservationOverlap, compareTimes } from '../utils/validation.js';
+import { formatDate, hasFunctionStarted } from '../utils/helpers.js';
+import { getMoviePoster } from './MoviesView.js';
 
+// Variables para mantener los datos en memoria en este archivo
 let currentUser = null;
-let allReservations = []; // Cache completo de reservas para validación de traslapes
-let workspacesList = [];  // Cache de espacios de trabajo
-
-// Traducciones para la interfaz de usuario
-const typeTranslations = {
-  'Private Office': 'Oficina Privada',
-  'Meeting Room': 'Sala de Reuniones',
-  'Coworking Space': 'Espacio Coworking',
-  'Auditorium': 'Auditorio'
-};
-
-const statusTranslations = {
-  'Pending': 'Pendiente',
-  'Approved': 'Aprobada',
-  'Rejected': 'Rechazada',
-  'Cancelled': 'Cancelada'
-};
+let allReservations = []; 
+let moviesList = [];  
 
 /**
- * Función principal para renderizar el tablero de reservas.
+ * 1. FUNCIÓN PRINCIPAL: Carga el tablero inicial de reservas.
  */
 export async function renderReservations(container) {
   currentUser = getCurrentUser();
+  if (!currentUser) return;
+  
   await loadReservationsBoard(container);
+
+  // Leer parámetros de película preseleccionada desde la URL (por ejemplo, al venir desde cartelera)
+  const hash = window.location.hash;
+  const queryString = hash.includes('?') ? hash.split('?')[1] : '';
+  const params = new URLSearchParams(queryString);
+  const preselectedMovieId = params.get('movieId');
+  
+  if (preselectedMovieId) {
+    // Limpiamos los parámetros para evitar reabrir el modal al refrescar
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/reservations');
+    openBookingModal(container, Number(preselectedMovieId));
+  }
 }
 
+/**
+ * 2. CARGAR TABLERO: Descarga los datos de reservas y cartelera para dibujarlos.
+ */
 async function loadReservationsBoard(container) {
   container.innerHTML = `
     <div class="flex items-center justify-center min-h-[300px]">
@@ -47,115 +49,134 @@ async function loadReservationsBoard(container) {
   `;
 
   try {
-    // Carga inicial paralela
-    const [resList, wsList] = await Promise.all([
+    const [resList, movieList] = await Promise.all([
       apiFetchReservations(),
-      apiFetchWorkspaces()
+      apiFetchMovies()
     ]);
 
     allReservations = resList;
-    workspacesList = wsList;
+    moviesList = movieList;
 
     const isAdmin = currentUser.role === 'admin';
-    // Filtrar reservas según el rol del usuario (empleados solo ven las suyas)
-    const visibleReservations = isAdmin
-      ? allReservations
-      : allReservations.filter(r => Number(r.userId) === Number(currentUser.id));
+    // Si es admin ve todas las reservas. Si es usuario común, solo las suyas.
+    const visibleReservations = [];
+    for (const r of allReservations) {
+      if (isAdmin || r.usuario === currentUser.name) {
+        visibleReservations.push(r);
+      }
+    }
 
     container.innerHTML = `
       <div class="space-y-6 animate-fade-in">
         <!-- Encabezado de la Página -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Tablero de Reservas</h2>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+              ${isAdmin ? 'Gestión de Reservas Globales' : 'Mis Entradas Compradas'}
+            </h2>
             <p class="text-sm text-slate-500 font-medium">
-              ${isAdmin ? 'Apruebe, rechace o gestione todas las reservas de espacios de los empleados' : 'Reserve espacios y gestione sus solicitudes de reserva'}
+              ${isAdmin ? 'Confirme o cancele las solicitudes de taquilla de los clientes' : 'Historial de tus boletos y solicitudes de reserva'}
             </p>
           </div>
-          <button id="book-workspace-btn" class="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-md transition-all duration-200 cursor-pointer gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path></svg>
-            <span>Reservar Espacio</span>
+          <button id="book-movie-btn" class="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-md transition-all duration-200 cursor-pointer gap-2">
+            🎟️ Reservar Boletos
           </button>
         </div>
 
-        <!-- Barra de Filtros -->
+        <!-- Filtros Reactivos -->
         <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Buscar Espacio</label>
-            <input id="filter-search" type="text" class="block w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none" placeholder="e.g. Sala A">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Buscar Película</label>
+            <input id="filter-search" type="text" class="block w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none" placeholder="e.g. El Padrino">
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tipo de Espacio</label>
-            <select id="filter-type" class="block w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none">
-              <option value="All">Todos los Tipos</option>
-              <option value="Private Office">Oficina Privada</option>
-              <option value="Meeting Room">Sala de Reuniones</option>
-              <option value="Coworking Space">Espacio Coworking</option>
-              <option value="Auditorium">Auditorio</option>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Sala de Cine</label>
+            <select id="filter-sala" class="block w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none">
+              <option value="All">Todas las Salas</option>
+              <option value="Sala Uno">Sala Uno</option>
+              <option value="Sala Dos">Sala Dos</option>
+              <option value="Sala Tres">Sala Tres</option>
+              <option value="Sala Cuatro">Sala Cuatro</option>
             </select>
           </div>
           <div>
             <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Estado de Reserva</label>
             <select id="filter-status" class="block w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none">
               <option value="All">Todos los Estados</option>
-              <option value="Pending">Pendiente</option>
-              <option value="Approved">Aprobada</option>
-              <option value="Rejected">Rechazada</option>
-              <option value="Cancelled">Cancelada</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Confirmada">Confirmada</option>
+              <option value="Cancelada">Cancelada</option>
             </select>
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fecha</label>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fecha de Reserva</label>
             <input id="filter-date" type="date" class="block w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none">
           </div>
         </div>
 
-        <!-- Contenedor del Listado -->
-        <div id="reservations-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <!-- Populado dinámicamente por la función de filtros -->
-        </div>
+        <!-- Contenedor del Listado (Grid de Tarjetas) -->
+        <div id="reservations-list-container" class="grid grid-cols-1 xl:grid-cols-2 gap-5"></div>
       </div>
+
+      <div id="booking-modal-container"></div>
     `;
 
-    // Referencias de controles de filtros
     const searchInput = container.querySelector('#filter-search');
-    const typeSelect = container.querySelector('#filter-type');
+    const salaSelect = container.querySelector('#filter-sala');
     const statusSelect = container.querySelector('#filter-status');
     const dateInput = container.querySelector('#filter-date');
     const listContainer = container.querySelector('#reservations-list-container');
 
+    // Función que filtra las reservas en tiempo real en la pantalla
     const runFiltering = () => {
-      const filters = {
-        search: searchInput.value,
-        type: typeSelect.value,
-        status: statusSelect.value,
-        date: dateInput.value
-      };
-      
-      const filtered = visibleReservations.filter(res => {
-        const wsName = res.workspace ? res.workspace.name.toLowerCase() : '';
-        if (filters.search && !wsName.includes(filters.search.toLowerCase())) return false;
-        
-        const wsType = res.workspace ? res.workspace.type : '';
-        if (filters.type !== 'All' && wsType !== filters.type) return false;
-        
-        if (filters.status !== 'All' && res.status !== filters.status) return false;
-        if (filters.date && res.date !== filters.date) return false;
-        
-        return true;
-      });
+      const searchVal = searchInput.value.toLowerCase();
+      const salaVal = salaSelect.value;
+      const statusVal = statusSelect.value;
+      const dateVal = dateInput.value;
 
+      const filtered = [];
+      for (const res of visibleReservations) {
+        // Filtro por nombre de película
+        const movieTitle = res.funcion_seleccionada ? res.funcion_seleccionada.titulo.toLowerCase() : '';
+        if (searchVal && !movieTitle.includes(searchVal)) {
+          continue;
+        }
+
+        // Obtener datos complementarios de la función
+        const movieData = moviesList.find(m => m.id === res.funcion_seleccionada?.pelicula_id);
+        const salaName = movieData ? movieData.sala : '';
+        
+        // Filtro por sala
+        if (salaVal !== 'All' && salaName !== salaVal) {
+          continue;
+        }
+
+        // Filtro por estado
+        if (statusVal !== 'All' && res.estado !== statusVal) {
+          continue;
+        }
+
+        // Filtro por fecha de reserva
+        if (dateVal && res.fecha_reserva !== dateVal) {
+          continue;
+        }
+
+        filtered.push(res);
+      }
+
+      // Ordenar las reservas de más reciente a más antigua
+      filtered.sort((a, b) => b.id - a.id);
       renderCards(filtered, listContainer, container);
     };
 
+    // Asignar los filtros reactivos
     searchInput.addEventListener('input', runFiltering);
-    typeSelect.addEventListener('change', runFiltering);
+    salaSelect.addEventListener('change', runFiltering);
     statusSelect.addEventListener('change', runFiltering);
     dateInput.addEventListener('change', runFiltering);
 
-    container.querySelector('#book-workspace-btn').addEventListener('click', () => openBookingModal(null, container));
+    container.querySelector('#book-movie-btn').addEventListener('click', () => openBookingModal(container));
 
-    // Ejecutar filtrado inicial
     runFiltering();
 
   } catch (err) {
@@ -164,313 +185,462 @@ async function loadReservationsBoard(container) {
   }
 }
 
+/**
+ * 3. RENDERIZAR TARJETAS: Genera las tarjetas de cada reserva.
+ */
 function renderCards(reservations, listContainer, boardContainer) {
   const isAdmin = currentUser.role === 'admin';
 
   if (reservations.length === 0) {
     listContainer.innerHTML = `
       <div class="col-span-full bg-white p-12 rounded-2xl border border-slate-100 shadow-sm text-center">
-        <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"></path></svg>
-        <h3 class="text-base font-bold text-slate-700">No se encontraron reservas</h3>
-        <p class="text-xs text-slate-400 mt-1">Intente cambiar los filtros o cree una solicitud de reserva nueva.</p>
+        <h3 class="text-base font-bold text-slate-700">No se encontraron boletos</h3>
+        <p class="text-xs text-slate-400 mt-1">Modifica los filtros o procesa una nueva compra.</p>
       </div>
     `;
     return;
   }
 
-  // Ordenar cronológicamente (más recientes primero)
-  const sorted = [...reservations].sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
+  let cardsHtml = '';
 
-  listContainer.innerHTML = sorted.map(res => {
-    const ws = res.workspace || { name: 'Espacio Desconocido', type: 'Desconocido', location: 'Desconocido', capacity: 0 };
-    const userObj = res.user || { name: 'Colaborador Desconocido', email: '' };
-    
-    const badgeColor = getStatusBadgeColor(res.status);
-    const isPending = res.status === 'Pending';
-    const isApproved = res.status === 'Approved';
+  for (const res of reservations) {
+    const movieData = moviesList.find(m => m.id === res.funcion_seleccionada?.pelicula_id);
+    const badgeColor = res.estado === 'Confirmada' 
+      ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+      : (res.estado === 'Cancelada' ? 'bg-rose-50 text-rose-700 border border-rose-100' : 'bg-amber-50 text-amber-700 border border-amber-100');
 
-    let actionsHTML = '';
+    const hasStarted = movieData ? hasFunctionStarted(movieData.fecha, movieData.hora) : false;
+
+    // Generar botones de acción para cada reserva
+    let actionButtons = '';
     
-    // Reglas de accesos para acciones en la tarjeta
     if (isAdmin) {
-      actionsHTML = `
-        <div class="flex items-center gap-1.5 pt-3 border-t border-slate-100 mt-4">
-          ${isPending ? `
-            <button data-id="${res.id}" data-action="approve" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
-              <span>Aprobar</span>
-            </button>
-            <button data-id="${res.id}" data-action="reject" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-              <span>Rechazar</span>
-            </button>
-          ` : ''}
-          <button data-id="${res.id}" data-action="edit" class="ml-auto p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="Editar Reserva">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"></path></svg>
-          </button>
-          <button data-id="${res.id}" data-action="delete" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Eliminar Registro">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path></svg>
-          </button>
+      // El Administrador tiene controles totales
+      let adminActions = '';
+      if (res.estado === 'Pendiente') {
+        adminActions = `
+          <button data-id="${res.id}" data-action="Confirmada" class="btn-status-change bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer">Confirmar</button>
+          <button data-id="${res.id}" data-action="Cancelada" class="btn-status-change bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer">Rechazar</button>
+        `;
+      }
+      actionButtons = `
+        <div class="flex flex-wrap gap-2 w-full justify-between items-center">
+          <div class="flex gap-2">
+            ${adminActions}
+          </div>
+          <div class="flex gap-2 ml-auto">
+            <button data-id="${res.id}" class="btn-edit-res bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-all border border-indigo-100 cursor-pointer">Editar</button>
+            <button data-id="${res.id}" class="btn-delete-res text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-all text-xs font-semibold cursor-pointer">Eliminar</button>
+          </div>
         </div>
       `;
     } else {
-      const canEdit = isPending;
-      const canCancel = isPending || isApproved;
-      
-      if (canEdit || canCancel) {
-        actionsHTML = `
-          <div class="flex items-center gap-1.5 pt-3 border-t border-slate-100 mt-4 justify-end">
-            ${canEdit ? `
-              <button data-id="${res.id}" data-action="edit" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"></path></svg>
-                <span>Editar</span>
-              </button>
-            ` : ''}
-            ${canCancel ? `
-              <button data-id="${res.id}" data-action="cancel" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
-                <span>Cancelar</span>
-              </button>
-            ` : ''}
+      // El Cliente común tiene opciones de cancelar y modificar si la función no ha empezado
+      if (res.estado === 'Cancelada') {
+        actionButtons = `<span class="text-xs text-rose-500 font-semibold italic self-center">Reserva Cancelada</span>`;
+      } else if (hasStarted) {
+        actionButtons = `<span class="text-xs text-slate-400 font-semibold italic self-center">Función Finalizada / En curso</span>`;
+      } else {
+        actionButtons = `
+          <div class="flex gap-2">
+            <button data-id="${res.id}" class="btn-edit-res bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-all border border-indigo-100 cursor-pointer">Modificar</button>
+            <button data-id="${res.id}" class="btn-cancel-user bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer">Cancelar Compra</button>
           </div>
         `;
       }
     }
 
-    return `
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
-        <div class="space-y-3">
-          <div class="flex items-start justify-between gap-2">
+    const posterUrl = getMoviePoster(res.funcion_seleccionada?.titulo, movieData?.imagen);
+
+    cardsHtml += `
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col sm:flex-row hover:shadow-md transition-all">
+        <!-- Poster miniatura a la izquierda -->
+        <div class="sm:w-32 h-40 sm:h-auto bg-slate-900 overflow-hidden shrink-0">
+          <img src="${posterUrl}" alt="${res.funcion_seleccionada?.titulo || 'Película'}" class="w-full h-full object-cover opacity-90" />
+        </div>
+
+        <div class="p-5 flex-grow flex flex-col justify-between space-y-4">
+          <div class="flex justify-between items-start gap-4">
             <div>
-              <span class="inline-block text-[10px] font-extrabold text-indigo-500 uppercase tracking-widest">
-                ${typeTranslations[ws.type] || ws.type}
-              </span>
-              <h4 class="text-base font-bold text-slate-800 truncate" title="${ws.name}">${ws.name}</h4>
+              <span class="text-[9px] font-mono text-slate-400 block">RESERVA #${res.id}</span>
+              <h4 class="text-base font-bold text-slate-900 leading-tight mt-0.5">${res.funcion_seleccionada?.titulo || 'Película'}</h4>
+              <p class="text-xs text-slate-500 mt-0.5">Cliente: <strong class="text-slate-800">${res.usuario}</strong></p>
             </div>
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0 ${badgeColor}">
-              ${statusTranslations[res.status] || res.status}
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">
+              ${res.estado}
             </span>
           </div>
 
-          <!-- Métricas del Espacio -->
-          <div class="grid grid-cols-2 gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3">
+          <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl text-xs font-medium">
             <div>
-              <span class="block text-[9px] font-bold text-slate-400 uppercase">Ubicación</span>
-              <span class="font-medium text-slate-700 truncate block">${ws.location}</span>
+              <span class="text-slate-400 block text-[9px] uppercase">Sala de Cine</span>
+              <span class="text-slate-700 font-bold">${movieData ? `${movieData.sala}` : 'N/A'}</span>
             </div>
             <div>
-              <span class="block text-[9px] font-bold text-slate-400 uppercase">Capacidad</span>
-              <span class="font-medium text-slate-700 block">${ws.capacity} personas</span>
+              <span class="text-slate-400 block text-[9px] uppercase">Entradas</span>
+              <span class="text-indigo-600 font-extrabold text-sm">${res.cantidad_entradas} Boletos</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[9px] uppercase">Fecha de Reserva</span>
+              <span class="text-slate-700">${formatDate(res.fecha_reserva)}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[9px] uppercase">Horario Función</span>
+              <span class="text-slate-700 font-semibold">${movieData ? `${movieData.hora} HS - ${formatDate(movieData.fecha)}` : 'N/A'}</span>
             </div>
           </div>
 
-          <!-- Fecha y Horario -->
-          <div class="flex items-center gap-2.5 text-xs font-semibold text-slate-600">
-            <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            <span>${formatDate(res.date)}</span>
-            <span class="text-slate-300">|</span>
-            <span class="font-mono text-slate-500">${res.startTime} - ${res.endTime}</span>
+          <div class="flex justify-end gap-2 border-t border-slate-50 pt-3">
+            ${actionButtons}
           </div>
-
-          <!-- Motivo de la Reserva -->
-          <div class="text-xs text-slate-500 italic bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
-            "${res.reason || 'No se ingresó motivo de reserva'}"
-          </div>
-
-          <!-- Colaborador vinculado (solo visible para Administradores) -->
-          ${isAdmin ? `
-            <div class="pt-3 border-t border-slate-100 flex items-center gap-2">
-              <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px]">
-                ${userObj.name.charAt(0).toUpperCase()}
-              </div>
-              <div class="text-[10px] font-semibold text-slate-600">
-                <span class="text-slate-400">Reservado por:</span> ${userObj.name} (${userObj.email})
-              </div>
-            </div>
-          ` : ''}
         </div>
-
-        ${actionsHTML}
       </div>
     `;
-  }).join('');
+  }
 
-  // Vincular controladores de eventos a los botones de las tarjetas
-  listContainer.querySelectorAll('button').forEach(btn => {
+  listContainer.innerHTML = cardsHtml;
+  setupCardEvents(boardContainer);
+}
+
+/**
+ * 4. EVENTOS DE LAS TARJETAS: Acciones de confirmar, cancelar, eliminar o editar.
+ */
+function setupCardEvents(boardContainer) {
+  // A. Confirmar o rechazar reserva (Sólo Admin)
+  boardContainer.querySelectorAll('.btn-status-change').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      const id = Number(btn.getAttribute('data-id'));
-      const action = btn.getAttribute('data-action');
-      const res = allReservations.find(r => Number(r.id) === id);
+      const resId = Number(e.currentTarget.dataset.id);
+      const action = e.currentTarget.dataset.action;
+      
+      const reservation = allReservations.find(r => r.id === resId);
+      if (!reservation) return;
 
-      if (!res) return;
+      const movie = moviesList.find(m => m.id === reservation.funcion_seleccionada?.pelicula_id);
 
-      if (action === 'approve') {
-        await patchStatus(res.id, 'Approved', boardContainer);
-      } else if (action === 'reject') {
-        await patchStatus(res.id, 'Rejected', boardContainer);
-      } else if (action === 'cancel') {
-        await patchStatus(res.id, 'Cancelled', boardContainer);
-      } else if (action === 'edit') {
-        openBookingModal(res, boardContainer);
-      } else if (action === 'delete') {
-        showConfirmModal({
-          title: 'Eliminar Reserva',
-          message: '¿Está seguro de que desea borrar este registro de reserva? Se eliminará de las bitácoras permanentemente.',
-          confirmText: 'Eliminar Registro',
-          onConfirm: async (modalEl, closeFn) => {
-            try {
-              await apiDeleteReservation(res.id);
-              showToast('Registro de reserva eliminado.');
-              closeFn();
-              loadReservationsBoard(boardContainer);
-            } catch (err) {
-              showToast('Error al eliminar la reserva.', 'error');
-            }
-          }
+      try {
+        if (action === 'Cancelada' && movie) {
+          // Si el admin la cancela, devolvemos los asientos a la película
+          movie.cupos_disponibles += reservation.cantidad_entradas;
+          await apiUpdateMovie(movie.id, movie);
+        }
+
+        await apiUpdateReservation(resId, {
+          ...reservation,
+          estado: action
         });
+
+        showToast(`Reserva ${action === 'Confirmada' ? 'confirmada' : 'rechazada'} con éxito`, 'success');
+        loadReservationsBoard(boardContainer);
+      } catch (err) {
+        console.error(err);
+        showToast('Error al actualizar el estado', 'error');
       }
+    });
+  });
+
+  // B. Cancelar compra de boletos (Cliente)
+  boardContainer.querySelectorAll('.btn-cancel-user').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const resId = Number(e.currentTarget.dataset.id);
+      const reservation = allReservations.find(r => r.id === resId);
+      if (!reservation) return;
+
+      const movie = moviesList.find(m => m.id === reservation.funcion_seleccionada?.pelicula_id);
+
+      if (movie && hasFunctionStarted(movie.fecha, movie.hora)) {
+        showToast('La función ya comenzó. No es posible cancelar.', 'error');
+        return;
+      }
+
+      Swal.fire({
+        title: '¿Cancelar esta compra/reserva?',
+        text: 'Los cupos se liberarán inmediatamente para otros usuarios.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, cancelar compra',
+        cancelButtonText: 'Mantener reserva'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            if (movie) {
+              movie.cupos_disponibles += reservation.cantidad_entradas;
+              await apiUpdateMovie(movie.id, movie);
+            }
+
+            await apiUpdateReservation(resId, {
+              ...reservation,
+              estado: 'Cancelada'
+            });
+
+            showToast('Reserva cancelada correctamente', 'success');
+            loadReservationsBoard(boardContainer);
+          } catch (err) {
+            console.error(err);
+            showToast('Error al cancelar', 'error');
+          }
+        }
+      });
+    });
+  });
+
+  // C. Eliminar registro físico de reserva (Sólo Admin)
+  boardContainer.querySelectorAll('.btn-delete-res').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const resId = Number(e.currentTarget.dataset.id);
+      const reservation = allReservations.find(r => r.id === resId);
+      if (!reservation) return;
+
+      const movie = moviesList.find(m => m.id === reservation.funcion_seleccionada?.pelicula_id);
+
+      Swal.fire({
+        title: '¿Eliminar registro de la reserva?',
+        text: 'Esta acción borrará de forma permanente el registro del sistema.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, borrar definitivamente',
+        cancelButtonText: 'Conservar'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            // Si la reserva borrada estaba activa, devolvemos los asientos
+            if (reservation.estado !== 'Cancelada' && movie) {
+              movie.cupos_disponibles += reservation.cantidad_entradas;
+              await apiUpdateMovie(movie.id, movie);
+            }
+
+            await apiDeleteReservation(resId);
+            showToast('Registro eliminado con éxito', 'success');
+            loadReservationsBoard(boardContainer);
+          } catch (err) {
+            console.error(err);
+            showToast('Error al eliminar', 'error');
+          }
+        }
+      });
+    });
+  });
+
+  // D. Modificar/Editar Reserva (Abre el modal de edición)
+  boardContainer.querySelectorAll('.btn-edit-res').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const resId = Number(e.currentTarget.dataset.id);
+      openEditBookingModal(boardContainer, resId);
     });
   });
 }
 
-async function patchStatus(id, nextStatus, container) {
-  try {
-    await apiPatchReservation(id, { status: nextStatus });
-    showToast(`El estado de la reserva ha cambiado a ${nextStatus === 'Approved' ? 'Aprobada' : nextStatus === 'Rejected' ? 'Rechazada' : 'Cancelada'}`);
-    await loadReservationsBoard(container);
-  } catch (err) {
-    showToast(`Error al cambiar el estado a ${nextStatus}`, 'error');
-  }
-}
+/**
+ * 5. MODAL PARA CREAR RESERVA
+ */
+function openBookingModal(container, preselectedMovieId = null) {
+  const modalContainer = container.querySelector('#booking-modal-container');
+  const activeMovies = moviesList.filter(m => m.estado === 'Activa');
 
-function openBookingModal(res = null, boardContainer) {
-  const isEdit = !!res;
-  const title = isEdit ? 'Editar Reserva' : 'Solicitar Reserva de Espacio';
-
-  // Mostrar espacios de trabajo (solo disponibles, o el que tiene seleccionado si se está editando)
-  const eligible = workspacesList.filter(w => {
-    if (w.status === 'Available') return true;
-    if (isEdit && Number(w.id) === Number(res.workspaceId)) return true;
-    return false;
-  });
-
-  if (eligible.length === 0) {
-    showToast('No hay espacios de trabajo disponibles para reservas en este momento.', 'warning');
+  if (activeMovies.length === 0) {
+    showToast('No hay películas activas para reservar.', 'warning');
     return;
   }
 
-  const bodyHTML = `
-    <form id="reservation-form" class="space-y-4">
-      <div>
-        <label for="res-workspace" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Seleccionar Espacio</label>
-        <select id="res-workspace" required class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none">
-          ${eligible.map(w => `
-            <option value="${w.id}" ${isEdit && Number(res.workspaceId) === Number(w.id) ? 'selected' : ''}>
-              ${w.name} (${typeTranslations[w.type] || w.type} - Cap: ${w.capacity} - ${w.location})
-            </option>
-          `).join('')}
-        </select>
+  modalContainer.innerHTML = `
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+        <h3 class="text-xl font-bold text-slate-900">Reservar Entradas</h3>
+        <form id="form-create-booking" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Película / Función</label>
+            <select id="book-movie" class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+              ${activeMovies.map(m => `<option value="${m.id}" ${preselectedMovieId === m.id ? 'selected' : ''}>${m.pelicula} (${m.sala} - Hora: ${m.hora} - Disp: ${m.cupos_disponibles})</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Cantidad de Boletos</label>
+            <input type="number" id="book-quantity" min="1" value="1" required class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div class="flex justify-end gap-2 pt-2 border-t">
+            <button type="button" id="booking-close-btn" class="px-4 py-2 text-sm font-semibold text-slate-500 cursor-pointer">Cerrar</button>
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer">Confirmar Compra</button>
+          </div>
+        </form>
       </div>
-
-      <div>
-        <label for="res-date" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha de Reserva</label>
-        <input id="res-date" type="date" required class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none" value="${isEdit ? res.date : ''}">
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="res-start" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora de Inicio</label>
-          <input id="res-start" type="time" required class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none" value="${isEdit ? res.startTime : '09:00'}">
-        </div>
-        <div>
-          <label for="res-end" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hora de Finalización</label>
-          <input id="res-end" type="time" required class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none" value="${isEdit ? res.endTime : '17:00'}">
-        </div>
-      </div>
-
-      <div>
-        <label for="res-reason" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Motivo / Uso del Espacio</label>
-        <textarea id="res-reason" required rows="3" class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none" placeholder="e.g. Reunión de planeación sprint">${isEdit ? res.reason : ''}</textarea>
-      </div>
-    </form>
+    </div>
   `;
 
-  showModal({
-    title,
-    bodyHTML,
-    confirmText: isEdit ? 'Guardar Cambios' : 'Reservar Ahora',
-    onConfirm: async (modalEl, closeFn) => {
-      const workspaceId = Number(modalEl.querySelector('#res-workspace').value);
-      const date = modalEl.querySelector('#res-date').value;
-      const startTime = modalEl.querySelector('#res-start').value;
-      const endTime = modalEl.querySelector('#res-end').value;
-      const reason = modalEl.querySelector('#res-reason').value.trim();
+  modalContainer.querySelector('#booking-close-btn').addEventListener('click', () => modalContainer.innerHTML = '');
 
-      if (!workspaceId || !date || !startTime || !endTime || !reason) {
-        showToast('Complete todos los campos del formulario.', 'warning');
-        return;
-      }
+  modalContainer.querySelector('#form-create-booking').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const movieId = Number(document.getElementById('book-movie').value);
+    const quantity = Number(document.getElementById('book-quantity').value);
 
-      // Regla 1: Validar fecha (hoy o en el futuro)
-      if (!isTodayOrFuture(date)) {
-        showToast('La fecha debe ser actual o en el futuro.', 'warning');
-        return;
-      }
+    const movie = moviesList.find(m => m.id === movieId);
+    if (!movie) return;
 
-      // Regla 2: Validar horario (inicio antes del fin)
-      if (compareTimes(startTime, endTime) >= 0) {
-        showToast('La hora de inicio debe ser anterior a la de finalización.', 'warning');
-        return;
-      }
+    if (hasFunctionStarted(movie.fecha, movie.hora)) {
+      showToast('La función ya comenzó o finalizó.', 'error');
+      return;
+    }
 
-      const candidate = {
-        id: isEdit ? res.id : undefined,
-        workspaceId,
-        date,
-        startTime,
-        endTime
-      };
+    if (quantity > movie.cupos_disponibles) {
+      showToast(`No hay suficientes asientos disponibles. Quedan ${movie.cupos_disponibles} cupos.`, 'error');
+      return;
+    }
 
-      // Regla 3: Verificar cruces de horarios
-      const conflict = checkReservationOverlap(candidate, allReservations);
-      if (conflict) {
-        showToast('Cruce de Horarios: El espacio ya está reservado en ese periodo.', 'error');
-        return;
-      }
+    const reservation = {
+      usuario: currentUser.name,
+      funcion_seleccionada: {
+        pelicula_id: movie.id,
+        titulo: movie.pelicula
+      },
+      cantidad_entradas: quantity,
+      fecha_reserva: new Date().toISOString().split('T')[0],
+      estado: currentUser.role === 'admin' ? 'Confirmada' : 'Pendiente'
+    };
 
-      const reservationData = {
-        userId: isEdit ? res.userId : Number(currentUser.id),
-        workspaceId,
-        date,
-        startTime,
-        endTime,
-        reason,
-        status: isEdit ? res.status : 'Pending'
-      };
+    try {
+      // Actualizar cupos en la película
+      movie.cupos_disponibles -= quantity;
+      await apiUpdateMovie(movie.id, movie);
 
-      try {
-        if (isEdit) {
-          await apiUpdateReservation(res.id, reservationData);
-          showToast('Reserva actualizada correctamente.');
-        } else {
-          await apiCreateReservation(reservationData);
-          showToast('Reserva creada con éxito.');
-        }
+      // Crear reserva
+      await apiCreateReservation(reservation);
 
-        closeFn();
-        await loadReservationsBoard(boardContainer);
-      } catch (err) {
-        showToast('Error al intentar guardar la reserva.', 'error');
-      }
+      showToast('¡Reserva creada con éxito!', 'success');
+      modalContainer.innerHTML = '';
+      loadReservationsBoard(container);
+    } catch (err) {
+      console.error(err);
+      showToast('Error al guardar la reserva', 'error');
     }
   });
 }
 
-function getStatusBadgeColor(status) {
-  switch (status) {
-    case 'Approved': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    case 'Pending': return 'bg-amber-100 text-amber-800 border-amber-200';
-    case 'Rejected': return 'bg-rose-100 text-rose-800 border-rose-200';
-    default: return 'bg-slate-100 text-slate-700 border-slate-200';
-  }
+/**
+ * 6. MODAL PARA MODIFICAR/EDITAR RESERVA EXISTENTE
+ */
+function openEditBookingModal(container, reservationId) {
+  const modalContainer = container.querySelector('#booking-modal-container');
+  const reservation = allReservations.find(r => r.id === reservationId);
+  if (!reservation) return;
+
+  const movie = moviesList.find(m => m.id === reservation.funcion_seleccionada?.pelicula_id);
+  const activeMovies = moviesList.filter(m => m.estado === 'Activa' || m.id === movie?.id);
+  const isAdmin = currentUser.role === 'admin';
+
+  modalContainer.innerHTML = `
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+        <h3 class="text-xl font-bold text-slate-900">Modificar Reserva</h3>
+        <form id="form-edit-booking" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Película / Función</label>
+            <select id="edit-book-movie" ${!isAdmin ? 'disabled' : ''} class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 disabled:opacity-75">
+              ${activeMovies.map(m => `<option value="${m.id}" ${movie?.id === m.id ? 'selected' : ''}>${m.pelicula} (${m.sala} - Disp: ${m.id === movie?.id ? m.cupos_disponibles + reservation.cantidad_entradas : m.cupos_disponibles})</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Cantidad de Boletos</label>
+            <input type="number" id="edit-book-quantity" min="1" value="${reservation.cantidad_entradas}" required class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          ${isAdmin ? `
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Estado de Reserva</label>
+              <select id="edit-book-status" class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                <option value="Pendiente" ${reservation.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                <option value="Confirmada" ${reservation.estado === 'Confirmada' ? 'selected' : ''}>Confirmada</option>
+                <option value="Cancelada" ${reservation.estado === 'Cancelada' ? 'selected' : ''}>Cancelada</option>
+              </select>
+            </div>
+          ` : ''}
+          <div class="flex justify-end gap-2 pt-2 border-t">
+            <button type="button" id="booking-close-btn" class="px-4 py-2 text-sm font-semibold text-slate-500 cursor-pointer">Cerrar</button>
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  modalContainer.querySelector('#booking-close-btn').addEventListener('click', () => modalContainer.innerHTML = '');
+
+  modalContainer.querySelector('#form-edit-booking').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newMovieId = Number(document.getElementById('edit-book-movie').value);
+    const newQuantity = Number(document.getElementById('edit-book-quantity').value);
+    const newStatus = isAdmin ? document.getElementById('edit-book-status').value : reservation.estado;
+
+    const newTargetMovie = moviesList.find(m => m.id === newMovieId);
+    if (!newTargetMovie) return;
+
+    if (!isAdmin && hasFunctionStarted(newTargetMovie.fecha, newTargetMovie.hora)) {
+      showToast('No se puede modificar reservas de funciones ya comenzadas.', 'error');
+      return;
+    }
+
+    try {
+      // 1. Ajuste de cupos según si la película cambió o no
+      if (movie && movie.id === newTargetMovie.id) {
+        const diff = newQuantity - reservation.cantidad_entradas;
+        
+        if (newStatus === 'Cancelada' && reservation.estado !== 'Cancelada') {
+          newTargetMovie.cupos_disponibles += reservation.cantidad_entradas;
+        } else if (newStatus !== 'Cancelada' && reservation.estado === 'Cancelada') {
+          if (newQuantity > newTargetMovie.cupos_disponibles) {
+            showToast(`No hay suficientes asientos. Quedan ${newTargetMovie.cupos_disponibles} cupos.`, 'error');
+            return;
+          }
+          newTargetMovie.cupos_disponibles -= newQuantity;
+        } else if (newStatus !== 'Cancelada') {
+          if (diff > newTargetMovie.cupos_disponibles) {
+            showToast(`No hay suficientes asientos. Quedan ${newTargetMovie.cupos_disponibles} adicionales.`, 'error');
+            return;
+          }
+          newTargetMovie.cupos_disponibles -= diff;
+        }
+
+        await apiUpdateMovie(newTargetMovie.id, newTargetMovie);
+      } else if (movie) {
+        // Si el admin cambió de película:
+        // Devolvemos los asientos a la vieja
+        if (reservation.estado !== 'Cancelada') {
+          movie.cupos_disponibles += reservation.cantidad_entradas;
+          await apiUpdateMovie(movie.id, movie);
+        }
+
+        // Restamos asientos de la nueva
+        if (newStatus !== 'Cancelada') {
+          if (newQuantity > newTargetMovie.cupos_disponibles) {
+            showToast(`No hay cupos en la nueva película. Quedan ${newTargetMovie.cupos_disponibles}.`, 'error');
+            return;
+          }
+          newTargetMovie.cupos_disponibles -= newQuantity;
+          await apiUpdateMovie(newTargetMovie.id, newTargetMovie);
+        }
+      }
+
+      // 2. Modificamos el registro de la reserva en el servidor
+      const updatedReservation = {
+        ...reservation,
+        funcion_seleccionada: {
+          pelicula_id: newTargetMovie.id,
+          titulo: newTargetMovie.pelicula
+        },
+        cantidad_entradas: newQuantity,
+        estado: newStatus
+      };
+
+      await apiUpdateReservation(reservationId, updatedReservation);
+
+      showToast('Reserva modificada con éxito', 'success');
+      modalContainer.innerHTML = '';
+      loadReservationsBoard(container);
+
+    } catch (err) {
+      console.error(err);
+      showToast('Error al modificar la reserva', 'error');
+    }
+  });
 }

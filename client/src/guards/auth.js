@@ -1,16 +1,19 @@
 import { getStorageItem, setStorageItem, removeStorageItem } from '../utils/helpers.js';
 
-const SESSION_KEY = 'workspace_reservation_user';
+// Clave utilizada para guardar los datos de sesión en LocalStorage/SessionStorage
+const SESSION_KEY = 'cine_reservation_user';
 
 /**
- * Recupera el usuario actualmente autenticado desde el almacenamiento local o de sesión.
+ * 1. OBTENER USUARIO ACTUAL:
+ * Busca los datos del usuario logueado en la memoria del navegador.
  */
 export function getCurrentUser() {
   return getStorageItem(SESSION_KEY);
 }
 
 /**
- * Guarda la sesión del usuario.
+ * 2. GUARDAR SESIÓN:
+ * Almacena los datos básicos del usuario una vez que inicia sesión con éxito.
  */
 export function setCurrentUser(user, rememberMe = true) {
   const safeUser = {
@@ -23,7 +26,8 @@ export function setCurrentUser(user, rememberMe = true) {
 }
 
 /**
- * Cierra la sesión del usuario y limpia los datos.
+ * 3. CERRAR SESIÓN:
+ * Limpia los datos de sesión del navegador y redirige a la pantalla de login.
  */
 export function logout() {
   removeStorageItem(SESSION_KEY);
@@ -31,38 +35,51 @@ export function logout() {
 }
 
 /**
- * Verifica si hay una sesión activa.
+ * 4. VERIFICAR AUTENTICACIÓN:
+ * Devuelve true si hay un usuario con sesión activa, o false en caso contrario.
  */
 export function isAuthenticated() {
-  return !!getCurrentUser();
+  if (getCurrentUser()) {
+    return true;
+  }
+  return false;
 }
 
 /**
- * Verifica si el usuario activo tiene rol de administrador.
+ * 5. VERIFICAR ADMINISTRADOR:
+ * Devuelve true si el usuario actual tiene el rol de administrador.
  */
 export function isAdmin() {
   const user = getCurrentUser();
-  return user && user.role === 'admin';
+  if (user && user.role === 'admin') {
+    return true;
+  }
+  return false;
 }
 
 /**
- * Evalúa las guardias de enrutamiento para una ruta de destino.
- * Retorna un objeto { allowed: boolean, redirect: string | null }
+ * 6. GUARDIÁN DE RUTAS:
+ * Analiza si el usuario tiene permiso de entrar a la ruta solicitada.
+ * Retorna { allowed: boolean, redirect: string | null }
  */
 export function checkRouteAccess(path) {
   const authActive = isAuthenticated();
   const user = getCurrentUser();
   
-  // Normalizar ruta quitando hash inicial
-  const hashPath = path.startsWith('#') ? path.substring(1) : path;
-  const route = hashPath.split('?')[0] || '/';
+  // Limpiamos la ruta (quitando el símbolo '#' y cualquier parámetro query)
+  let cleanPath = path;
+  if (cleanPath.startsWith('#')) {
+    cleanPath = cleanPath.substring(1);
+  }
+  const route = cleanPath.split('?')[0] || '/';
 
-  // Configuración de permisos por ruta
+  // Configuración de reglas de acceso por ruta
   const routeRules = {
     '/': { requiresAuth: true },
     '/login': { guestOnly: true },
     '/dashboard': { requiresAuth: true, role: 'admin' },
-    '/workspaces': { requiresAuth: true, role: 'admin' },
+    '/movies': { requiresAuth: true },
+    '/rooms': { requiresAuth: true, role: 'admin' },
     '/reservations': { requiresAuth: true },
     '/users': { requiresAuth: true, role: 'admin' },
     '/access-denied': { requiresAuth: true }
@@ -70,26 +87,32 @@ export function checkRouteAccess(path) {
 
   const rule = routeRules[route];
 
+  // Si la ruta solicitada no existe, redirigimos a una ruta segura por defecto
   if (!rule) {
-    // Si la ruta no existe, redirige según el estado de sesión
-    if (!authActive) return { allowed: false, redirect: '/login' };
-    return { allowed: false, redirect: user.role === 'admin' ? '/dashboard' : '/reservations' };
+    if (!authActive) {
+      return { allowed: false, redirect: '/login' };
+    }
+    // Si ya está logueado, los admins van al dashboard, los clientes a la cartelera
+    const defaultRedirect = user.role === 'admin' ? '/dashboard' : '/movies';
+    return { allowed: false, redirect: defaultRedirect };
   }
 
-  // Si es solo para invitados y ya está logueado
+  // Regla A: Si la ruta es solo para invitados (ej: login) y ya está logueado
   if (rule.guestOnly && authActive) {
-    return { allowed: false, redirect: user.role === 'admin' ? '/dashboard' : '/reservations' };
+    const defaultRedirect = user.role === 'admin' ? '/dashboard' : '/movies';
+    return { allowed: false, redirect: defaultRedirect };
   }
 
-  // Si requiere autenticación y no está logueado
+  // Regla B: Si la ruta requiere autenticación y no ha iniciado sesión
   if (rule.requiresAuth && !authActive) {
     return { allowed: false, redirect: '/login' };
   }
 
-  // Si requiere un rol específico y el usuario no lo cumple
+  // Regla C: Si la ruta requiere un rol (ej: admin) y el usuario no lo tiene
   if (rule.role && user && user.role !== rule.role) {
     return { allowed: false, redirect: '/access-denied' };
   }
 
+  // Si pasa todas las comprobaciones, se le permite el acceso
   return { allowed: true, redirect: null };
 }

@@ -3,107 +3,240 @@
     {
       "id": 1,
       "name": "Administrador",
-      "email": "admin@empresa.com",
+      "email": "admin@cine.com",
       "password": "123456",
       "role": "admin"
     },
     {
       "id": 2,
       "name": "Juan",
-      "email": "juan@empresa.com",
+      "email": "juan@cine.com",
       "password": "123456",
       "role": "user"
     },
     {
       "id": 3,
       "name": "Maria",
-      "email": "maria@empresa.com",
+      "email": "maria@cine.com",
       "password": "123456",
       "role": "user"
     }
   ],
-  "workspaces": [
+  "salas": [
     {
       "id": 1,
-      "name": "Private Office 101",
-      "type": "Private Office",
-      "capacity": 2,
-      "location": "1st Floor - Wing A",
-      "status": "Available"
+      "nombre": "Sala Uno",
+      "capacidad": 150,
+      "tipo": "2D",
+      "estado": "Activa"
     },
     {
       "id": 2,
-      "name": "Meeting Room A",
-      "type": "Meeting Room",
-      "capacity": 10,
-      "location": "2nd Floor - Wing B",
-      "status": "Available"
+      "nombre": "Sala Dos",
+      "capacidad": 120,
+      "tipo": "3D",
+      "estado": "Activa"
     },
     {
       "id": 3,
-      "name": "Coworking Space Zone Alpha",
-      "type": "Coworking Space",
-      "capacity": 30,
-      "location": "Ground Floor",
-      "status": "Available"
+      "nombre": "Sala Tres",
+      "capacidad": 80,
+      "tipo": "IMAX",
+      "estado": "Activa"
     },
     {
       "id": 4,
-      "name": "Main Auditorium",
-      "type": "Auditorium",
-      "capacity": 100,
-      "location": "Basement",
-      "status": "Available"
+      "nombre": "Sala Cuatro",
+      "capacidad": 200,
+      "tipo": "2D",
+      "estado": "Activa"
     },
     {
-      "name": "Meeting Room B",
-      "type": "Meeting Room",
-      "capacity": 8,
-      "location": "3rd Floor",
-      "status": "Available",
+      "nombre": "Sala Cinco",
+      "capacidad": 150,
+      "tipo": "IMAX",
+      "estado": "Activa",
       "id": 5
+    }
+  ],
+  "movies": [
+    {
+      "id": 1,
+      "pelicula": "Pablo Escobar",
+      "salaId": 1,
+      "sala": "Sala Uno",
+      "fecha": "2030-10-24",
+      "hora": "20:00",
+      "capacidad_total": 150,
+      "cupos_disponibles": 149,
+      "estado": "Activa"
+    },
+    {
+      "id": 2,
+      "pelicula": "El Padrino",
+      "salaId": 2,
+      "sala": "Sala Dos",
+      "fecha": "2030-10-24",
+      "hora": "15:30",
+      "capacidad_total": 120,
+      "cupos_disponibles": 120,
+      "estado": "Activa"
+    },
+    {
+      "id": 3,
+      "pelicula": "Inception",
+      "salaId": 3,
+      "sala": "Sala Tres",
+      "fecha": "2030-10-25",
+      "hora": "18:00",
+      "capacidad_total": 80,
+      "cupos_disponibles": 75,
+      "estado": "Activa"
+    },
+    {
+      "id": 4,
+      "pelicula": "Gladiador",
+      "salaId": 1,
+      "sala": "Sala Uno",
+      "fecha": "2030-10-25",
+      "hora": "21:00",
+      "capacidad_total": 150,
+      "cupos_disponibles": 150,
+      "estado": "Activa"
+    },
+    {
+      "id": 5,
+      "pelicula": "Avatar",
+      "salaId": 4,
+      "sala": "Sala Cuatro",
+      "fecha": "2030-10-26",
+      "hora": "14:00",
+      "capacidad_total": 200,
+      "cupos_disponibles": 200,
+      "estado": "Cancelada"
+    },
+    {
+      "pelicula": "Interstellar",
+      "salaId": 1,
+      "sala": "Sala Uno",
+      "fecha": "2026-06-06",
+      "hora": "13:40",
+      "capacidad_total": 150,
+      "cupos_disponibles": 150,
+      "estado": "Activa",
+      "id": 6
+    },
+    {
+      "pelicula": "riwi",
+      "salaId": 1,
+      "sala": "Sala Uno",
+      "fecha": "2026-06-10",
+      "hora": "19:05",
+      "capacidad_total": 150,
+      "cupos_disponibles": 150,
+      "estado": "Activa",
+      "id": 7
+    },
+    {
+      "pelicula": "riwi",
+      "salaId": 1,
+      "sala": "Sala Uno",
+      "fecha": "2026-06-10",
+      "hora": "21:05",
+      "capacidad_total": 150,
+      "cupos_disponibles": 150,
+      "estado": "Activa",
+      "id": 8
+    },
+    {
+      "pelicula": "riwi",
+      "salaId": 1,
+      "sala": "Sala Uno",
+      "fecha": "2026-06-10",
+      "hora": "23:05",
+      "capacidad_total": 150,
+      "cupos_disponibles": 150,
+      "estado": "Activa",
+      "id": 9
+    },
+    {
+      "pelicula": "fabrica de la cultura",
+      "salaId": 3,
+      "sala": "Sala Tres",
+      "fecha": "2026-06-06",
+      "hora": "15:10",
+      "capacidad_total": 80,
+      "cupos_disponibles": 80,
+      "estado": "Activa",
+      "id": 10
+    },
+    {
+      "pelicula": "fabrica de la cultura",
+      "salaId": 3,
+      "sala": "Sala Tres",
+      "fecha": "2026-06-06",
+      "hora": "22:15",
+      "capacidad_total": 80,
+      "cupos_disponibles": 80,
+      "estado": "Activa",
+      "id": 11
     }
   ],
   "reservations": [
     {
       "id": 1,
-      "userId": 2,
-      "workspaceId": 2,
-      "date": "2026-06-10",
-      "startTime": "09:00",
-      "endTime": "11:00",
-      "reason": "Product roadmap alignment",
-      "status": "Approved"
+      "usuario": "Juan",
+      "funcion_seleccionada": {
+        "pelicula_id": 2,
+        "titulo": "El Padrino"
+      },
+      "cantidad_entradas": 2,
+      "fecha_reserva": "2026-06-05",
+      "estado": "Cancelada"
     },
     {
       "id": 2,
-      "userId": 3,
-      "workspaceId": 1,
-      "date": "2026-06-11",
-      "startTime": "14:00",
-      "endTime": "17:00",
-      "reason": "Client presentation prep",
-      "status": "Pending"
+      "usuario": "Maria",
+      "funcion_seleccionada": {
+        "pelicula_id": 3,
+        "titulo": "Inception"
+      },
+      "cantidad_entradas": 4,
+      "fecha_reserva": "2026-06-05",
+      "estado": "Pendiente"
     },
     {
       "id": 3,
-      "userId": 2,
-      "workspaceId": 3,
-      "date": "2026-06-12",
-      "startTime": "10:00",
-      "endTime": "12:00",
-      "reason": "Focus coding session",
-      "status": "Rejected"
+      "usuario": "Juan",
+      "funcion_seleccionada": {
+        "pelicula_id": 4,
+        "titulo": "Gladiador"
+      },
+      "cantidad_entradas": 1,
+      "fecha_reserva": "2026-06-05",
+      "estado": "Cancelada"
     },
     {
-      "id": 4,
-      "userId": 3,
-      "workspaceId": 2,
-      "date": "2026-06-10",
-      "startTime": "14:00",
-      "endTime": "15:30",
-      "reason": "Team daily sync",
-      "status": "Approved"
+      "usuario": "Juan",
+      "funcion_seleccionada": {
+        "pelicula_id": 1,
+        "titulo": "Pablo Escobar"
+      },
+      "cantidad_entradas": 1,
+      "fecha_reserva": "2026-06-05",
+      "estado": "Pendiente",
+      "id": 4
+    },
+    {
+      "usuario": "Juan",
+      "funcion_seleccionada": {
+        "pelicula_id": 3,
+        "titulo": "Inception"
+      },
+      "cantidad_entradas": 1,
+      "fecha_reserva": "2026-06-05",
+      "estado": "Pendiente",
+      "id": 5
     }
   ]
 }
