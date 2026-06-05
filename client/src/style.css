@@ -26,12 +26,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #1e293b;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #334155;
 }
 
 /* Styling helpers for modern touch */
@@ -53,4 +53,80 @@ input:focus, select:focus, textarea:focus {
     transform: none;
     animation-timing-function: cubic-bezier(0,0,0.2,1);
   }
+}
+
+/* ==========================================
+   TEMA CINEMATOGRÁFICO OSCURO (OVERLAY CSS)
+   ========================================== */
+
+body {
+  background-color: #020617 !important; /* bg-slate-950 */
+}
+
+/* Convertir tarjetas blancas en tarjetas oscuras de cine */
+.bg-white {
+  background-color: rgba(15, 23, 42, 0.6) !important; /* bg-slate-900/60 */
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-color: rgba(30, 41, 59, 0.8) !important; /* border-slate-800 */
+  color: #f8fafc !important; /* text-slate-50 */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Asegurar legibilidad del texto en modo oscuro */
+.text-slate-900 {
+  color: #f8fafc !important; /* slate-50 */
+}
+.text-slate-800 {
+  color: #f1f5f9 !important; /* slate-100 */
+}
+.text-slate-700 {
+  color: #e2e8f0 !important; /* slate-200 */
+}
+.text-slate-600 {
+  color: #cbd5e1 !important; /* slate-300 */
+}
+.text-slate-500 {
+  color: #94a3b8 !important; /* slate-400 */
+}
+.text-slate-400 {
+  color: #64748b !important; /* slate-500 */
+}
+
+/* Ajustes de fondos alternos y bordes */
+.bg-slate-50 {
+  background-color: rgba(2, 6, 23, 0.4) !important; /* bg-slate-950/40 */
+}
+.bg-slate-50\/50 {
+  background-color: rgba(2, 6, 23, 0.2) !important;
+}
+.border-slate-100 {
+  border-color: rgba(30, 41, 59, 0.7) !important;
+}
+.border-slate-50 {
+  border-color: rgba(30, 41, 59, 0.4) !important;
+}
+.divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(30, 41, 59, 0.6) !important;
+}
+
+/* Inputs, Selects y Formularios */
+input, select, textarea {
+  background-color: rgba(2, 6, 23, 0.6) !important;
+  border-color: rgba(30, 41, 59, 0.9) !important;
+  color: #f1f5f9 !important;
+}
+input::placeholder {
+  color: #475569 !important;
+}
+
+/* Modales y Formularios emergentes (Fondo oscuro sólido) */
+.fixed .bg-white, .fixed div.bg-white {
+  background-color: #0f172a !important; /* slate-900 sólido */
+  border: 1px solid rgba(79, 70, 229, 0.3) !important; /* borde índigo sutil */
+}
+
+/* Correcciones de colores en tablas y elementos hover */
+tr:hover {
+  background-color: rgba(30, 41, 59, 0.25) !important;
 }

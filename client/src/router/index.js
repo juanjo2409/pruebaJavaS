@@ -76,7 +76,7 @@ async function resolveRoute() {
     // Si la estructura del layout no está creada todavía, la generamos
     if (!contentArea) {
       appRoot.innerHTML = `
-        <div class="flex flex-col md:flex-row min-h-screen bg-slate-50 text-slate-800 w-full">
+        <div class="flex flex-col md:flex-row min-h-screen bg-slate-950 text-slate-100 w-full">
           <!-- Contenedor de la barra lateral -->
           <aside id="sidebar-container" class="w-full md:w-64 bg-slate-900 text-white shrink-0 border-r border-slate-800 flex flex-col"></aside>
           
