@@ -1,6 +1,6 @@
-# 🎬 CineGestor - SPA de Gestión de Cine y Reserva de Entradas
+# 🎬 CineRiwi - SPA de Gestión de Cine y Reserva de Entradas
 
-¡Bienvenido a **CineGestor**! Este proyecto es una **Single Page Application (SPA)** moderna, elegante y simplificada, diseñada para administrar la cartelera de un cine, configurar las salas de proyección y gestionar la compra y reserva de boletos de entrada.
+¡Bienvenido a **CineRiwi**! Este proyecto es una **Single Page Application (SPA)** moderna, elegante y simplificada, diseñada para administrar la cartelera de un cine, configurar las salas de proyección y gestionar la compra y reserva de boletos de entrada.
 
 El sistema está optimizado para ser **fácil de entender, explicar y sustentar** académicamente, utilizando programación estructurada clara y comentarios explicativos detallados en español en todo el código fuente.
 

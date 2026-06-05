@@ -41,7 +41,7 @@ export function renderSidebar(container) {
     <div class="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-slate-800 md:hidden w-full">
       <div class="flex items-center gap-2">
         <span class="text-xl">🎬</span>
-        <span class="font-bold text-white tracking-wide text-lg">CineGestor</span>
+        <span class="font-bold text-white tracking-wide text-lg">CineRiwi</span>
       </div>
       <button id="sidebar-hamburger" class="text-slate-400 hover:text-white focus:outline-none transition-colors text-2xl">
         ☰
@@ -54,7 +54,7 @@ export function renderSidebar(container) {
       <div class="hidden md:flex items-center gap-3 px-6 py-6 border-b border-slate-800">
         <span class="text-2xl bg-indigo-600 p-2 rounded-xl text-white shadow-md">🎬</span>
         <div>
-          <h1 class="font-extrabold text-white leading-tight tracking-wider text-base">CINEGESTOR</h1>
+          <h1 class="font-extrabold text-white leading-tight tracking-wider text-base">CINERIWI</h1>
           <p class="text-[10px] font-semibold text-indigo-400 tracking-widest uppercase">Taquilla & Cartelera</p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-# 💻 Frontend de CineGestor (`/client`)
+# 💻 Frontend de CineRiwi (`/client`)
 
 Esta carpeta contiene todo el frontend de la Single Page Application (SPA) para la gestión de cine y la compra de boletos.
 

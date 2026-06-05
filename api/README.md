@@ -1,6 +1,6 @@
 # 🗄️ Base de Datos API Simulada (`/api`)
 
-Este directorio contiene el backend de simulación para **CineGestor**. Utiliza `json-server` para crear una API RESTful de desarrollo completa e interactiva a partir de un archivo JSON local.
+Este directorio contiene el backend de simulación para **CineRiwi**. Utiliza `json-server` para crear una API RESTful de desarrollo completa e interactiva a partir de un archivo JSON local.
 
 ---
 

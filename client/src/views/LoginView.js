@@ -24,18 +24,18 @@ export async function renderLogin(container) {
         
         <!-- Contenido promocional decorativo -->
         <div class="relative z-10 p-12 text-left space-y-6 max-w-lg">
-          <div class="inline-flex bg-indigo-600/15 text-indigo-400 p-4 rounded-3xl border border-indigo-500/20 text-4xl shadow-lg shadow-indigo-600/10">
-            🎬
+          <div class="inline-flex items-center gap-2 bg-indigo-600/15 text-indigo-400 px-4 py-2 rounded-2xl border border-indigo-500/20 text-sm font-extrabold shadow-lg shadow-indigo-600/10">
+            🎬 <span class="tracking-widest uppercase text-xs">CineRiwi Barranquilla</span>
           </div>
           <div>
             <h1 class="text-5xl font-black tracking-tight text-white leading-tight">Tu Boleto al <span class="text-indigo-400">Mejor Cine</span></h1>
             <p class="text-slate-400 mt-4 text-base font-medium leading-relaxed">
-              Disfruta de las mejores películas en salas IMAX, 3D y 2D. Reserva tus entradas sin filas y gestiona la cartelera en tiempo real.
+              La plataforma de taquilla y cartelera exclusiva para la comunidad de **Riwi Sede Barranquilla**. Reserva tus entradas en salas 2D, 3D e IMAX sin salir del campus.
             </p>
           </div>
           <div class="flex gap-6 pt-4 text-xs font-bold uppercase tracking-widest text-indigo-400">
-            <span>🍿 Aforo Controlado</span>
-            <span>🎟️ Compra Express</span>
+            <span>🍿 CODERS MODE ON</span>
+            <span>📍 SEDE BARRANQUILLA</span>
           </div>
         </div>
       </div>
@@ -52,11 +52,11 @@ export async function renderLogin(container) {
         <div class="relative z-10 w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl space-y-6">
           <div class="text-center lg:text-left">
             <!-- Icono para móvil -->
-            <div class="inline-flex lg:hidden bg-indigo-600 p-3.5 rounded-2xl text-white shadow-lg shadow-indigo-600/20 mb-3 text-2xl">
-              🎬
+            <div class="inline-flex lg:hidden items-center gap-2 bg-indigo-600 px-3 py-1.5 rounded-xl text-white shadow-lg shadow-indigo-600/20 mb-3 text-sm font-black">
+              🎬 <span>CineRiwi</span>
             </div>
             <h2 class="text-3xl font-black text-white tracking-tight">Iniciar Sesión</h2>
-            <p class="text-xs text-slate-400 mt-1.5 font-medium">Ingresa tus credenciales para acceder a la taquilla</p>
+            <p class="text-xs text-slate-400 mt-1.5 font-medium">Ingresa tus credenciales para acceder a la taquilla de **Riwi Barranquilla**</p>
           </div>
 
           <form id="login-form" class="space-y-4">

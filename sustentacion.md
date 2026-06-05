@@ -1,4 +1,4 @@
-# 🎓 Guía Completa de Sustentación y Defensa Técnica: CineGestor SPA
+# 🎓 Guía Completa de Sustentación y Defensa Técnica: CineRiwi SPA
 
 Este documento es tu **hoja de ruta para obtener la máxima calificación (10/10)** en la sustentación de tu proyecto. Aquí encontrarás explicaciones sencillas, la arquitectura del sistema, el flujo de desarrollo y, lo más importante, un **banco de preguntas y respuestas preparadas** ante cualquier cuestionamiento del profesor o jurado.
 
@@ -6,7 +6,7 @@ Este documento es tu **hoja de ruta para obtener la máxima calificación (10/10
 
 ## 1. 🎯 Ficha Técnica del Proyecto
 
-*   **Nombre del Sistema:** CineGestor
+*   **Nombre del Sistema:** CineRiwi
 *   **Arquitectura:** SPA (Single Page Application - Aplicación de una Sola Página)
 *   **Lenguajes:** HTML5, CSS3 (Tailwind CSS v4) y JavaScript Moderno (Vanilla ES6 Módulos).
 *   **Base de Datos y API:** Simulación de API REST con `json-server` mediante almacenamiento JSON local (`api/db.json`).
