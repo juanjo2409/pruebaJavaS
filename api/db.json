@@ -57,6 +57,13 @@
       "tipo": "IMAX",
       "estado": "Activa",
       "id": 5
+    },
+    {
+      "nombre": "Sala Cinco",
+      "capacidad": 100,
+      "tipo": "2D",
+      "estado": "Activa",
+      "id": 6
     }
   ],
   "movies": [
