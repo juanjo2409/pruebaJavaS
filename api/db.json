@@ -1,0 +1,109 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Administrador",
+      "email": "admin@empresa.com",
+      "password": "123456",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "name": "Juan",
+      "email": "juan@empresa.com",
+      "password": "123456",
+      "role": "user"
+    },
+    {
+      "id": 3,
+      "name": "Maria",
+      "email": "maria@empresa.com",
+      "password": "123456",
+      "role": "user"
+    }
+  ],
+  "workspaces": [
+    {
+      "id": 1,
+      "name": "Private Office 101",
+      "type": "Private Office",
+      "capacity": 2,
+      "location": "1st Floor - Wing A",
+      "status": "Available"
+    },
+    {
+      "id": 2,
+      "name": "Meeting Room A",
+      "type": "Meeting Room",
+      "capacity": 10,
+      "location": "2nd Floor - Wing B",
+      "status": "Available"
+    },
+    {
+      "id": 3,
+      "name": "Coworking Space Zone Alpha",
+      "type": "Coworking Space",
+      "capacity": 30,
+      "location": "Ground Floor",
+      "status": "Available"
+    },
+    {
+      "id": 4,
+      "name": "Main Auditorium",
+      "type": "Auditorium",
+      "capacity": 100,
+      "location": "Basement",
+      "status": "Available"
+    },
+    {
+      "name": "Meeting Room B",
+      "type": "Meeting Room",
+      "capacity": 8,
+      "location": "3rd Floor",
+      "status": "Available",
+      "id": 5
+    }
+  ],
+  "reservations": [
+    {
+      "id": 1,
+      "userId": 2,
+      "workspaceId": 2,
+      "date": "2026-06-10",
+      "startTime": "09:00",
+      "endTime": "11:00",
+      "reason": "Product roadmap alignment",
+      "status": "Approved"
+    },
+    {
+      "id": 2,
+      "userId": 3,
+      "workspaceId": 1,
+      "date": "2026-06-11",
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "reason": "Client presentation prep",
+      "status": "Pending"
+    },
+    {
+      "id": 3,
+      "userId": 2,
+      "workspaceId": 3,
+      "date": "2026-06-12",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "reason": "Focus coding session",
+      "status": "Rejected"
+    },
+    {
+      "id": 4,
+      "userId": 3,
+      "workspaceId": 2,
+      "date": "2026-06-10",
+      "startTime": "14:00",
+      "endTime": "15:30",
+      "reason": "Team daily sync",
+      "status": "Approved"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vite / compilación
+dist/
+dist-ssr/
+*.local
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS / temporales
+.DS_Store
+Thumbs.db
+
+# Temporales de antigravity o inteligencia artificial
+.gemini/
+*.log
