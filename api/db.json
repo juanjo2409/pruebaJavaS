@@ -13,13 +13,6 @@
       "email": "juan@cine.com",
       "password": "123456",
       "role": "user"
-    },
-    {
-      "id": 3,
-      "name": "Maria",
-      "email": "maria@cine.com",
-      "password": "123456",
-      "role": "user"
     }
   ],
   "salas": [
@@ -97,7 +90,7 @@
       "fecha": "2030-10-25",
       "hora": "18:00",
       "capacidad_total": 80,
-      "cupos_disponibles": 75,
+      "cupos_disponibles": 79,
       "estado": "Activa"
     },
     {
@@ -200,17 +193,6 @@
       "cantidad_entradas": 2,
       "fecha_reserva": "2026-06-05",
       "estado": "Cancelada"
-    },
-    {
-      "id": 2,
-      "usuario": "Maria",
-      "funcion_seleccionada": {
-        "pelicula_id": 3,
-        "titulo": "Inception"
-      },
-      "cantidad_entradas": 4,
-      "fecha_reserva": "2026-06-05",
-      "estado": "Pendiente"
     },
     {
       "id": 3,

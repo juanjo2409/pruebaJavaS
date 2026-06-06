@@ -3,7 +3,8 @@ import {
   apiFetchReservations, 
   apiCreateUser, 
   apiUpdateUser, 
-  apiDeleteUser 
+  apiDeleteUser,
+  apiDeleteReservation
 } from '../services/api.js';
 import { getCurrentUser } from '../guards/auth.js';
 import { showToast } from '../components/Toast.js';
@@ -302,11 +303,20 @@ export async function renderUsers(container) {
 
         if (result.isConfirmed) {
           try {
+            // 1. Eliminar al usuario de la colección
             await apiDeleteUser(userId);
-            showToast(`El usuario ${targetUser.name} fue eliminado.`, 'success');
+
+            // 2. Buscar y eliminar todas sus reservas asociadas
+            for (const r of reservations) {
+              if (r.usuario === targetUser.name) {
+                await apiDeleteReservation(r.id);
+              }
+            }
+
+            showToast(`El usuario ${targetUser.name} y todas sus reservas fueron eliminados.`, 'success');
             renderUsers(container); // Recargar
           } catch (err) {
-            showToast('Error al eliminar usuario.', 'error');
+            showToast('Error al eliminar usuario y sus reservas.', 'error');
           }
         }
       }
