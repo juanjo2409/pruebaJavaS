@@ -49,6 +49,29 @@ export async function apiFetchUserByEmail(email) {
   return users[0] || null;
 }
 
+// Crear un nuevo usuario en el sistema
+export async function apiCreateUser(data) {
+  return await request('/users', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+// Modificar datos de un usuario (como cambiar su rol)
+export async function apiUpdateUser(id, data) {
+  return await request(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+// Eliminar un usuario del sistema
+export async function apiDeleteUser(id) {
+  return await request(`/users/${id}`, {
+    method: 'DELETE'
+  });
+}
+
 /* ==========================================================================
    SERVICIOS PARA SALAS (Salas de Cine)
    ========================================================================== */
