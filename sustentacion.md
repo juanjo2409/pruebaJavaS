@@ -1,116 +1,188 @@
 # 🎓 Guía Completa de Sustentación y Defensa Técnica: CineRiwi SPA
 
-Este documento es tu **hoja de ruta para obtener la máxima calificación (10/10)** en la sustentación de tu proyecto. Aquí encontrarás explicaciones sencillas, la arquitectura del sistema, el flujo de desarrollo y, lo más importante, un **banco de preguntas y respuestas preparadas** ante cualquier cuestionamiento del profesor o jurado.
+Este documento es tu **hoja de ruta oficial para obtener la máxima calificación (10/10)** en la sustentación de tu proyecto. Explica de manera didáctica y con código de nivel de estudiante cómo está construido el sistema, cómo interactúa el Frontend con el Backend, cómo funciona la seguridad y cómo se maneja la persistencia de datos.
 
 ---
 
 ## 1. 🎯 Ficha Técnica del Proyecto
 
 *   **Nombre del Sistema:** CineRiwi
-*   **Arquitectura:** SPA (Single Page Application - Aplicación de una Sola Página)
+*   **Arquitectura:** SPA (Single Page Application - Aplicación de una Sola Página) sin frameworks pesados.
 *   **Lenguajes:** HTML5, CSS3 (Tailwind CSS v4) y JavaScript Moderno (Vanilla ES6 Módulos).
 *   **Base de Datos y API:** Simulación de API REST con `json-server` mediante almacenamiento JSON local (`api/db.json`).
-*   **Enfoque de Desarrollo:** Código estructurado y procedimental, libre de lógica compleja de arreglos (sin encadenamientos raros de `.map().reduce()`), priorizando bucles sencillos `for...of` y funciones declaradas tradicionales para facilitar la explicación verbal.
+*   **Enfoque de Desarrollo:** Código secuencial, estructurado y procedimental, libre de lógica compleja de arreglos (sin encadenamientos raros de `.map().reduce()`), priorizando bucles sencillos `for...of` y funciones declaradas tradicionales para facilitar la explicación verbal.
 
 ---
 
-## 2. 🏛️ Arquitectura del Sistema (¿Cómo está construido?)
+## 2. 🏛️ Arquitectura General de una SPA (Single Page Application)
 
-El proyecto está diseñado bajo el patrón de **módulos independientes**. La aplicación carga un solo archivo HTML (`index.html`) y usa JavaScript para inyectar dinámicamente el contenido de las pantallas según el hash de la URL.
+Una **SPA** es una aplicación web que se carga una sola vez en el navegador (`index.html`). Cuando el usuario hace clic en los enlaces o navega, el navegador **no recarga la pestaña**. En su lugar, JavaScript intercepta el cambio de URL y redibuja la sección central del DOM.
 
+### Flujo de Ejecución al Arrancar la Aplicación:
 ```mermaid
 graph TD
     subgraph Navegador [Cliente Web - SPA]
-        A[index.html] -->|1. Arranca| B[main.js]
-        B -->|2. Inicializa| C[router/index.js]
-        C -->|3. Evalúa sesión| D[guards/auth.js]
-        D -->|4. Autoriza y renderiza| E[views/ Módulos de Pantallas]
-        E -->|5. Llama servicios| F[services/api.js]
-    end
-    subgraph Servidor [Backend de Datos]
-        F <-->|Peticiones HTTP Fetch| G[json-server: Puerto 3000]
-        G <-->|Persiste registros| H[db.json]
-    end
+        A[index.html] -->|1. Carga inicial| B[main.js]
+        B -->|2. Arranca router| C[router/index.js]
+        C -->|3. Valida sesión| D[guards/auth.js]
+        D -->|4. Inyecta HTML| E[views/ Módulos de Pantallas]
+        E -->|5. Peticiones HTTP| F[services/api.js]
+      end
+      subgraph Servidor [Backend de Datos]
+        F <-->|Fetch asíncrono| G[json-server: Puerto 3000]
+        G <-->|Lee y escribe| H[db.json]
+      end
 ```
 
-### Componentes del código que debes conocer:
-1.  **`main.js`**: El punto de entrada de toda la aplicación. Solo inicializa el enrutamiento.
-2.  **`router/index.js`**: Escucha el cambio de dirección (`hashchange`) e inyecta la vista correspondiente en el contenedor `#app`.
-3.  **`guards/auth.js`**: Administra la sesión del usuario activo en el navegador (`localStorage` o `sessionStorage`) y evalúa si tiene permiso para entrar a una ruta basándose en su rol (`admin` o `user`).
-4.  **`services/api.js`**: Contiene las funciones que realizan las peticiones HTTP (`fetch`) al servidor.
-5.  **`views/`**: Carpeta que contiene los archivos JS de cada pantalla. Cada vista tiene una función `render` que dibuja el HTML e instala los escuchadores de eventos (`click`, `submit`).
+---
+
+## 3. 🖥️ Explicación Detallada de Cada Vista (Módulo a Módulo)
+
+Cada pantalla del sistema reside en `client/src/views/` y exporta una función principal `render...` que recibe el contenedor principal del DOM.
+
+### 🔑 A. Vista de Login (`LoginView.js`)
+*   **Función:** Permite la entrada de usuarios autenticándose por su correo y contraseña.
+*   **Cómo funciona:**
+    1.  Dibuja un formulario estilizado con temática de **Riwi Barranquilla** en pantalla dividida (split-screen).
+    2.  Al hacer *Submit*, lee los campos `email` y `password`.
+    3.  Llama a `apiFetchUserByEmail(email)` en el servicio de la API.
+    4.  Si el usuario existe, compara la contraseña en texto plano.
+    5.  Si es correcta, llama a `setCurrentUser(user, rememberMe)` para registrar la sesión y redirige al Dashboard (si es `admin`) o a la Cartelera (si es `user`).
+
+### 📊 B. Vista de Dashboard (`DashboardView.js`)
+*   **Función:** Muestra estadísticas en tiempo real y gráficos visuales sobre la taquilla.
+*   **Cómo funciona:**
+    1.  Obtiene películas, salas, usuarios y reservas mediante peticiones paralelas (`Promise.all`).
+    2.  **Cálculo de Métricas:** Con un bucle `for...of` sobre las reservas calcula boletos vendidos, reservas confirmadas y pendientes.
+    3.  **Gráfico de Barras Nivel Estudiante:** Agrupa los boletos por película en un objeto clave-valor, los ordena y renderiza un ranking de las 3 películas más vendidas. Utiliza etiquetas `div` de Tailwind CSS con anchos porcentuales dinámicos (`style="width: ${percentage}%"`) para emular un gráfico de barras interactivo sin usar librerías externas.
+    4.  **Ocupación de Salas:** Cruza las funciones en cartelera con la capacidad total de cada sala (`salas`), mostrando una barra indicadora que se colorea en rojo si la sala supera el 80% de ocupación.
+    5.  **Actividad Reciente:** Ordena y expone en una tabla las últimas 5 reservas procesadas.
+
+### 🎬 C. Vista de Películas / Cartelera (`MoviesView.js`)
+*   **Función:** Muestra el catálogo de películas y permite al Administrador programar funciones en salas específicas.
+*   **Cómo funciona:**
+    1.  **Modo Cliente:** Renderiza tarjetas de películas con sus pósteres mapeados de alta calidad, salas asignadas, cupos de aforo e incluye un botón "Reservar".
+    2.  **Modo Administrador:** Muestra botones para "+ Nueva Función" y "Eliminar".
+    3.  **Prevención de Choques/Solapamiento:** Antes de guardar una nueva función, el código recorre en un bucle `for...of` todas las películas en cartelera. Compara si existe alguna función programada en la **misma sala (`salaId`), misma fecha (`fecha`) y mismo horario (`hora`)**. Si hay coincidencia, frena el flujo y muestra una alerta con `SweetAlert2`.
+    4.  **Escritura Secuencial:** Para evitar colisiones en `json-server` al agregar horarios múltiples, el código realiza peticiones `POST` individuales de forma ordenada en un bucle utilizando `await` en cada paso.
+
+### 🍿 D. Vista de Salas (`RoomsView.js`)
+*   **Función:** Permite al administrador crear, editar y eliminar salas físicas del cine.
+*   **Cómo funciona:**
+    1.  Renderiza un listado con las especificaciones de cada sala: Nombre, Capacidad de asientos, Tipo (2D, 3D, IMAX) y Estado (Activa, En Mantenimiento).
+    2.  Permite abrir un modal interactivo para crear o editar salas, validando que la capacidad no sea menor a cero antes de guardar la información en `/salas`.
+
+### 🎟️ E. Vista de Reservas (`ReservationsView.js`)
+*   **Función:** Permite a los clientes comprar boletos y ver su historial, y a los administradores auditar todas las reservas.
+*   **Cómo funciona:**
+    1.  **Filtros Interactivos:** Contiene un buscador dinámico por nombre de cliente y un filtro por estado de reserva (Confirmada, Pendiente, Cancelada).
+    2.  **Integridad de Aforo (Proceso de Compra):** Al registrar una reserva, se verifica si hay suficientes `cupos_disponibles`. Si es así, se resta la cantidad del aforo, se actualiza la película con un método `PUT` en `/movies/:id` y luego se crea la reserva con un `POST` en `/reservations`.
+    3.  **Proceso de Cancelación:** Si se cancela la reserva, se le devuelve el aforo a la película sumando los cupos correspondientes en el servidor.
+
+### 👥 F. Vista de Usuarios (`UsersView.js`)
+*   **Función:** Listado administrativo de todas las cuentas creadas.
+*   **Cómo funciona:**
+    1.  Muestra tarjetas rápidas con el total de usuarios, cuántos son administradores, cuántos clientes y cuántos boletos en total se han vendido.
+    2.  Calcula de manera dinámica la cantidad acumulada de boletos reservados por cada cliente, cruzando los datos del usuario con sus compras reales.
 
 ---
 
-## 3. 🛠️ Principales Retos Técnicos y Cómo se Resolvieron
+## 4. 🔗 Conexión Frontend-Backend (Consumo de la API REST)
 
-### Reto A: Evitar colisiones de horarios en las salas de cine (Anti-solapamiento)
-*   **El problema:** El administrador no debe poder programar dos películas en la misma sala en el mismo horario.
-*   **La solución:** En [MoviesView.js](file:///home/coder/pruebaJavaS/client/src/views/MoviesView.js), antes de enviar la petición de guardado, recorremos todas las funciones existentes del servidor. Usamos un condicional para verificar si coinciden el `salaId`, la `fecha` y la `hora`. Si coinciden, el sistema frena el proceso de inmediato y muestra un aviso interactivo.
+Toda la comunicación con el servidor de datos ocurre en `client/src/services/api.js` mediante la API `fetch` nativa del navegador.
 
-### Reto B: Integridad del Aforo al Comprar y Cancelar
-*   **El problema:** Mantener actualizados los cupos de asientos y evitar vender más entradas de la capacidad máxima de la sala.
-*   **La solución:** Al realizar una reserva en [ReservationsView.js](file:///home/coder/pruebaJavaS/client/src/views/ReservationsView.js), se comprueba si la cantidad solicitada supera los `cupos_disponibles`. De no ser así, restamos la cantidad, actualizamos la función de la película mediante un método `PUT` en el servidor y creamos el registro de reserva. Al cancelar la reserva, le sumamos nuevamente los cupos a la película.
+### La Función Centralizada `request()`:
+Para no duplicar código, se creó una función genérica que maneja las cabeceras JSON, convierte las respuestas y captura errores:
 
-### Reto C: Colisiones de escritura en `json-server` (Escritura Secuencial)
-*   **El problema:** Cuando el administrador agrega una película con múltiples horarios, si enviamos todas las peticiones fetch de golpe (con `Promise.all`), el servidor `json-server` colisiona al escribir al mismo tiempo en el archivo físico `db.json`.
-*   **La solución:** Se implementó un bucle secuencial `for...of` con `await` para registrar una por una las funciones horarias, asegurando que cada una se guarde correctamente antes de iniciar la siguiente.
+```javascript
+async function request(endpoint, options = {}) {
+  const url = `${BASE_URL}${endpoint}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  
+  const response = await fetch(url, { ...options, headers });
+  
+  if (!response.ok) {
+    throw new Error(`Error en servidor: ${response.status}`);
+  }
+  
+  if (response.status === 204) return true; // Código de éxito sin contenido
+  return await response.json();
+}
+```
 
----
-
-## 4. 🙋‍♂️ Banco de Preguntas y Respuestas para la Sustentación
-
-Aquí tienes las preguntas que con mayor probabilidad te hará el profesor, y la respuesta exacta que debes darle:
-
-### ❓ Pregunta 1: ¿Por qué usaste JavaScript Vanilla (puro) en lugar de un framework como React, Angular o Vue?
-> **Respuesta:**  
-> *"Decidimos utilizar JavaScript Vanilla con módulos ES6 para demostrar una sólida comprensión de las tecnologías fundamentales de la web (DOM, eventos y promesas) sin depender de librerías externas. Esto permite comprender en profundidad el ciclo de vida real de una aplicación: cómo se intercepta una ruta, cómo se gestiona el estado de sesión y cómo se manipula el DOM de forma directa, lo cual es muy valioso para sentar las bases antes de escalar a un framework."*
-
-### ❓ Pregunta 2: ¿Cómo funciona el enrutador de tu aplicación? ¿Qué pasa si el usuario cambia la URL manualmente?
-> **Respuesta:**  
-> *"El enrutador está implementado en `router/index.js` y funciona a través de **Rutas por Hash**. Escucha el evento `hashchange` de la ventana del navegador. Si el usuario escribe manualmente en la barra de direcciones `#/movies` o hace clic en un enlace, el navegador no recarga la página; en su lugar, se dispara el evento, el enrutador analiza la ruta limpia, comprueba los permisos mediante el archivo `auth.js` y dibuja dinámicamente la vista solicitada en el contenedor `#app`."*
-
-### ❓ Pregunta 3: ¿Qué es una API REST y cómo interactúa tu cliente con ella?
-> **Respuesta:**  
-> *"Una API REST es una interfaz que permite la transferencia de datos estructurados utilizando los métodos estándar del protocolo HTTP. En nuestro caso:*
-> * *Usamos **GET** para consultar la lista de películas, salas o reservas.*
-> * *Usamos **POST** para crear películas o registrar reservas.*
-> * *Usamos **PUT** para modificar los cupos de una película o cambiar el estado de una reserva.*
-> * *Usamos **DELETE** para remover una película o sala del sistema.*
-> 
-> *Toda esta comunicación se maneja de forma asíncrona mediante la API `fetch` en el archivo `services/api.js`, apuntando a nuestro servidor local `json-server` en el puerto 3000."*
-
-### ❓ Pregunta 4: ¿Cómo funciona el paso de parámetros en las peticiones para unificar información?
-> **Respuesta:**  
-> *"Dado que `json-server` es una base de datos relacional simulada, utilizamos query parameters (parámetros de consulta en la URL) para obtener datos específicos. Por ejemplo, al validar el inicio de sesión del usuario, consultamos `/users?email=correo` para obtener solo el registro correspondiente. Para las reservas, consultamos `/reservations?usuario=nombre` para traer únicamente las compras del cliente activo. Luego, en el cliente web, asociamos el ID de la función con la lista de películas en memoria para reconstruir información combinada como la sala y el póster."*
-
-### ❓ Pregunta 5: ¿Cómo controlas la sesión del usuario? ¿Qué diferencia hay entre LocalStorage y SessionStorage en tu código?
-> **Respuesta:**  
-> *"La sesión del usuario se controla en `guards/auth.js`. Cuando el usuario inicia sesión correctamente:*
-> * *Si seleccionó 'Recordar sesión en este equipo', guardamos la información en `localStorage` para que la sesión continúe activa aunque el usuario cierre el navegador.*
-> * *Si no la seleccionó, la guardamos en `sessionStorage`, de modo que los datos se eliminan automáticamente cuando se cierra la pestaña del navegador.*
-> 
-> *Al cargar la aplicación, leemos estos almacenamientos para restaurar el estado y saber qué rol tiene el usuario."*
-
-### ❓ Pregunta 6: Si dos clientes intentaran comprar el último boleto al mismo tiempo, ¿cómo maneja la concurrencia tu aplicación?
-> **Respuesta:**  
-> *"En la versión actual de prototipo, la validación se realiza en el cliente comparando la cantidad de boletos solicitada contra los cupos disponibles en ese instante. Si dos usuarios envían la petición exactamente al mismo tiempo, `json-server` procesará las peticiones HTTP de manera secuencial en su cola de entrada. La primera petición modificará con éxito los cupos a 0. La segunda petición, al ser procesada en el servidor, guardará la reserva pero como mejora para producción, en un entorno con base de datos real (como Node.js + PostgreSQL), implementaríamos transacciones con bloqueo de registros (Pessimistic/Optimistic Locking) o restricciones en el backend para retornar un error 400 antes de confirmar la compra."*
-
-### ❓ Pregunta 7: ¿Cómo implementaste el diseño cinematográfico oscuro?
-> **Respuesta:**  
-> *"Para lograr un diseño moderno de alta fidelidad que simulara una plataforma de streaming o cine premium sin complicar el código JavaScript de las vistas, modificamos las clases de diseño global en `client/src/style.css` y el layout de `router/index.js`.*
-> * *Establecimos un fondo azul-pizarra oscuro profundo (`#020617`).*
-> * *Creamos reglas CSS globales que capturan los elementos con la clase `.bg-white` para transformarlos automáticamente en tarjetas oscuras con efecto de desenfoque de fondo (glassmorphism).*
-> * *Cambiamos las escalas de grises de los textos a tonos claros para un contraste ideal y adaptamos los campos de formulario y botones."*
+### Ejemplos de Consumo de Endpoints:
+*   **GET (Obtener películas):** `request('/movies')` $\rightarrow$ Retorna un array con todas las películas.
+*   **POST (Crear reserva):** `request('/reservations', { method: 'POST', body: JSON.stringify(reservaData) })`.
+*   **PUT (Modificar película):** `request('/movies/1', { method: 'PUT', body: JSON.stringify(movieData) })`.
+*   **DELETE (Borrar sala):** `request('/salas/2', { method: 'DELETE' })`.
 
 ---
 
-## 5. 💡 Simulación del Examen de Sustentación (Paso a Paso)
+## 5. 💾 Persistencia de Datos (Base de Datos y Sesiones)
 
-Cuando te toque presentar el proyecto frente al profesor, hazlo en este orden para demostrar control absoluto:
+La persistencia de datos se gestiona en dos niveles distintos:
 
-1.  **Paso 1 (Inicio de Sesión):** Abre la pantalla de Login y muestra el diseño responsivo a doble columna. Inicia sesión como **Cliente** (`juan@cine.com`). Muestra que sólo tienes acceso a "Cartelera" y "Reservas".
-2.  **Paso 2 (Hacer una Reserva):** Selecciona una película en la cartelera, escoge un horario y realiza la compra de 2 boletos. Ve a la pestaña "Reservas" y muestra tu boleto generado con el póster correspondiente.
-3.  **Paso 3 (Intento de Intrusión):** Escribe manualmente en la barra de direcciones `#/rooms` o `#/dashboard` para mostrarle al profesor cómo el guardián de seguridad te redirige automáticamente a la pantalla de **Acceso Denegado**.
-4.  **Paso 4 (Control de Administrador):** Cierra sesión e ingresa como **Administrador** (`admin@cine.com`). Ve al **Dashboard** y muestra las estadísticas de boletos vendidos actualizadas.
-5.  **Paso 5 (Validar Conflicto):** Ve a "Cartelera", haz clic en "+ Nueva Función" e intenta agregar una película en una sala y horario que ya estén ocupados. Muestra la notificación de alerta de conflicto de sala que programamos.
+### A. Persistencia en el Servidor (Base de Datos):
+*   El backend utiliza `json-server` sobre el archivo físico `api/db.json`.
+*   Cada vez que realizamos una petición `POST`, `PUT` o `DELETE`, `json-server` escribe directamente en el archivo `db.json`, asegurando que la información de las películas, salas, usuarios y reservas no se pierda al reiniciar la aplicación.
+
+### B. Persistencia en el Cliente (Sesiones del Navegador):
+Se administra en `guards/auth.js` usando las APIs del navegador:
+*   **`localStorage`:** Si el usuario selecciona "Recordar sesión", guardamos sus datos aquí. Los datos persisten incluso después de cerrar y abrir el navegador.
+*   **`sessionStorage`:** Si no selecciona "Recordar sesión", se guarda aquí. La sesión se destruye automáticamente al cerrar la pestaña.
+
+---
+
+## 6. 🛡️ Seguridad y Control de Acceso (Guards)
+
+La seguridad está implementada del lado del cliente mediante un sistema de **Guardianes de Ruta** configurado en `guards/auth.js`.
+
+### El Mapa de Reglas (`routeRules`):
+Definimos los privilegios de cada ruta del sistema:
+
+```javascript
+const routeRules = {
+  '/': { requiresAuth: true },
+  '/login': { guestOnly: true },
+  '/dashboard': { requiresAuth: true, role: 'admin' },
+  '/movies': { requiresAuth: true },
+  '/rooms': { requiresAuth: true, role: 'admin' },
+  '/reservations': { requiresAuth: true },
+  '/users': { requiresAuth: true, role: 'admin' }
+};
+```
+
+### Lógica del Guardián (`checkRouteAccess`):
+Cada vez que el usuario navega a una ruta en el enrutador:
+1.  **Regla 1 (Usuario no logueado):** Si la ruta tiene `requiresAuth: true` y no hay una sesión activa, lo redirige automáticamente a `#/login`.
+2.  **Regla 2 (Invitado intentando entrar al login):** Si la ruta tiene `guestOnly: true` (como `/login`) y el usuario ya está autenticado, lo redirige a su panel principal según su rol.
+3.  **Regla 3 (Acceso no autorizado por Rol):** Si un cliente normal intenta acceder a una ruta administrativa como `#/dashboard`, `#/rooms` o `#/users` (que requieren `role: 'admin'`), el guardián deniega el acceso y lo redirige a la vista `#/access-denied` (Acceso Denegado).
+
+---
+
+## 7. 🙋‍♂️ Banco de Preguntas Académicas (Q&A)
+
+### ❓ Pregunta 1: ¿Por qué no utilizaste base de datos SQL como MySQL o PostgreSQL?
+> **Respuesta:** *"Para el alcance de este proyecto académico y la defensa de la arquitectura del Frontend, un motor relacional completo agregaría complejidad en el despliegue del evaluador. Al usar `json-server`, simulamos el comportamiento exacto de una API RESTful con persistencia real sobre un archivo plano JSON (`db.json`), lo que simplifica la demostración y permite concentrarnos en la lógica de negocio y enrutamiento del lado del cliente."*
+
+### ❓ Pregunta 2: ¿Cómo evitas que un usuario inyecte código malicioso en tus formularios?
+> **Respuesta:** *"Al construir el HTML dinámicamente y asignar los valores de los inputs mediante la lectura del atributo `.value` del DOM, el navegador trata estos datos como cadenas de texto puro y no como código ejecutable. Además, al enviarlos al backend con Fetch convertidos a formato JSON, se mitigan los riesgos de inyección de scripts básicos del lado del cliente."*
+
+### ❓ Pregunta 3: ¿Qué es el método `Promise.all` que utilizas en tus vistas?
+> **Respuesta:** *"Es un método que nos permite ejecutar múltiples peticiones HTTP (promesas asíncronas) de forma paralela en lugar de esperar a que termine una para iniciar la siguiente. Esto optimiza drásticamente el tiempo de carga del Dashboard y de las vistas, ya que solicitamos películas, usuarios y reservas de manera simultánea."*
+
+### ❓ Pregunta 4: ¿Por qué se utilizó un bucle secuencial en lugar de `Promise.all` al guardar horarios múltiples?
+> **Respuesta:** *"Debido a que `json-server` almacena los datos en un único archivo físico (`db.json`), si intentamos realizar varias escrituras simultáneas con `Promise.all`, el servidor choca consigo mismo al intentar escribir en el disco al mismo tiempo, lo que corrompe el archivo. Para solucionarlo, usamos un bucle `for...of` con `await` para forzar una escritura secuencial y ordenada en el disco del servidor."*
+
+---
+
+## 8. 💡 Simulación de Exposición Paso a Paso
+
+1.  **Inicio de Sesión:** Entra a `#/login`, destaca el diseño con la temática de **Riwi Barranquilla** y accede como cliente (`juan@cine.com`).
+2.  **Reserva:** Escoge una película, selecciona entradas y compra. Ve a "Reservas" y muestra tu boleto.
+3.  **Intrusión:** Modifica manualmente la URL a `#/rooms` en el navegador para mostrar cómo el **Guardián de Seguridad** te bloquea.
+4.  **Admin:** Entra como administrador (`admin@cine.com`), muestra las estadísticas y el gráfico de barras nativo en el **Dashboard**.
+5.  **Conflicto:** Ve a Cartelera e intenta crear una función en la misma sala, fecha y hora de otra película existente para demostrar la validación anti-solapamiento.
