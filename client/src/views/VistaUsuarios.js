@@ -5,9 +5,9 @@ import {
   apiUpdateUser, 
   apiDeleteUser,
   apiDeleteReservation
-} from '../services/api.js';
-import { getCurrentUser } from '../guards/auth.js';
-import { showToast } from '../components/Toast.js';
+} from '../servicios/api.js';
+import { getCurrentUser } from '../guards/autenticacion.js';
+import { showToast } from '../components/Notificaciones.js';
 
 /**
  * DIBUJAR VISTA DE USUARIOS:

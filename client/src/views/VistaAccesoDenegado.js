@@ -1,4 +1,4 @@
-import { getCurrentUser } from '../guards/auth.js';
+import { getCurrentUser } from '../guards/autenticacion.js';
 
 /**
  * DIBUJAR PANTALLA DE ACCESO DENEGADO:

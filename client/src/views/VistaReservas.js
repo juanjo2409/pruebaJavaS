@@ -5,11 +5,11 @@ import {
   apiUpdateReservation, 
   apiDeleteReservation,
   apiUpdateMovie
-} from '../services/api.js';
-import { getCurrentUser } from '../guards/auth.js';
-import { showToast } from '../components/Toast.js';
-import { formatDate, hasFunctionStarted } from '../utils/helpers.js';
-import { getMoviePoster } from './MoviesView.js';
+} from '../servicios/api.js';
+import { getCurrentUser } from '../guards/autenticacion.js';
+import { showToast } from '../components/Notificaciones.js';
+import { formatDate, hasFunctionStarted } from '../utils/utilidades.js';
+import { getMoviePoster } from './VistaPeliculas.js';
 
 // Variables para mantener los datos en memoria en este archivo
 let currentUser = null;

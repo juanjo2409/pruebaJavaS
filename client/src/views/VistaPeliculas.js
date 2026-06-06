@@ -1,7 +1,7 @@
-import { apiFetchMovies, apiCreateMovie, apiUpdateMovie, apiDeleteMovie, apiFetchSalas } from '../services/api.js';
-import { getCurrentUser } from '../guards/auth.js';
-import { showToast } from '../components/Toast.js';
-import { formatDate } from '../utils/helpers.js';
+import { apiFetchMovies, apiCreateMovie, apiUpdateMovie, apiDeleteMovie, apiFetchSalas } from '../servicios/api.js';
+import { getCurrentUser } from '../guards/autenticacion.js';
+import { showToast } from '../components/Notificaciones.js';
+import { formatDate } from '../utils/utilidades.js';
 
 /**
  * FUNCIÓN AUXILIAR:

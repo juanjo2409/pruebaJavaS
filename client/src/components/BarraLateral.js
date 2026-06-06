@@ -1,4 +1,4 @@
-import { getCurrentUser, logout } from '../guards/auth.js';
+import { getCurrentUser, logout } from '../guards/autenticacion.js';
 
 // Variable para controlar si el menú móvil está abierto o cerrado
 let isMobileMenuOpen = false;

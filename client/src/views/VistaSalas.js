@@ -1,6 +1,6 @@
-import { apiFetchSalas, apiCreateSala, apiUpdateSala, apiDeleteSala } from '../services/api.js';
-import { getCurrentUser } from '../guards/auth.js';
-import { showToast } from '../components/Toast.js';
+import { apiFetchSalas, apiCreateSala, apiUpdateSala, apiDeleteSala } from '../servicios/api.js';
+import { getCurrentUser } from '../guards/autenticacion.js';
+import { showToast } from '../components/Notificaciones.js';
 
 /**
  * 1. FUNCIÓN PRINCIPAL: Verifica permisos, carga las salas de la API,

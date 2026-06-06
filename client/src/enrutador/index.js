@@ -1,14 +1,14 @@
-import { checkRouteAccess, isAuthenticated, getCurrentUser } from '../guards/auth.js';
-import { renderSidebar, updateActiveSidebarLink } from '../components/Sidebar.js';
+import { checkRouteAccess, isAuthenticated, getCurrentUser } from '../guards/autenticacion.js';
+import { renderSidebar, updateActiveSidebarLink } from '../components/BarraLateral.js';
 
 // Importación de las vistas para renderizar cada pantalla
-import { renderLogin } from '../views/LoginView.js';
-import { renderDashboard } from '../views/DashboardView.js';
-import { renderMovies } from '../views/MoviesView.js';
-import { renderRooms } from '../views/RoomsView.js';
-import { renderReservations } from '../views/ReservationsView.js';
-import { renderUsers } from '../views/UsersView.js';
-import { renderAccessDenied } from '../views/AccessDeniedView.js';
+import { renderLogin } from '../views/VistaLogin.js';
+import { renderDashboard } from '../views/VistaDashboard.js';
+import { renderMovies } from '../views/VistaPeliculas.js';
+import { renderRooms } from '../views/VistaSalas.js';
+import { renderReservations } from '../views/VistaReservas.js';
+import { renderUsers } from '../views/VistaUsuarios.js';
+import { renderAccessDenied } from '../views/VistaAccesoDenegado.js';
 
 // Mapa de rutas de la aplicación: asocia cada ruta a una función de renderizado
 const routes = {

@@ -68,7 +68,7 @@
       "fecha": "2030-10-24",
       "hora": "20:00",
       "capacidad_total": 150,
-      "cupos_disponibles": 149,
+      "cupos_disponibles": 150,
       "estado": "Activa"
     },
     {
@@ -101,7 +101,7 @@
       "fecha": "2030-10-25",
       "hora": "21:00",
       "capacidad_total": 150,
-      "cupos_disponibles": 150,
+      "cupos_disponibles": 138,
       "estado": "Activa"
     },
     {
@@ -208,17 +208,6 @@
     {
       "usuario": "Juan",
       "funcion_seleccionada": {
-        "pelicula_id": 1,
-        "titulo": "Pablo Escobar"
-      },
-      "cantidad_entradas": 1,
-      "fecha_reserva": "2026-06-05",
-      "estado": "Pendiente",
-      "id": 4
-    },
-    {
-      "usuario": "Juan",
-      "funcion_seleccionada": {
         "pelicula_id": 3,
         "titulo": "Inception"
       },
@@ -226,6 +215,17 @@
       "fecha_reserva": "2026-06-05",
       "estado": "Pendiente",
       "id": 5
+    },
+    {
+      "usuario": "Administrador",
+      "funcion_seleccionada": {
+        "pelicula_id": 4,
+        "titulo": "Gladiador"
+      },
+      "cantidad_entradas": 12,
+      "fecha_reserva": "2026-06-06",
+      "estado": "Confirmada",
+      "id": 6
     }
   ]
 }

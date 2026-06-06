@@ -1,6 +1,6 @@
-import { apiFetchUserByEmail } from '../services/api.js';
-import { setCurrentUser } from '../guards/auth.js';
-import { showToast } from '../components/Toast.js';
+import { apiFetchUserByEmail } from '../servicios/api.js';
+import { setCurrentUser } from '../guards/autenticacion.js';
+import { showToast } from '../components/Notificaciones.js';
 
 /**
  * DIBUJAR VISTA DE LOGIN:

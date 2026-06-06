@@ -1,4 +1,4 @@
-import { getStorageItem, setStorageItem, removeStorageItem } from '../utils/helpers.js';
+import { getStorageItem, setStorageItem, removeStorageItem } from '../utils/utilidades.js';
 
 // Clave utilizada para guardar los datos de sesión en LocalStorage/SessionStorage
 const SESSION_KEY = 'cine_reservation_user';

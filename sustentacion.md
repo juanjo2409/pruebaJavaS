@@ -22,11 +22,11 @@ Una **SPA** es una aplicación web que se carga una sola vez en el navegador (`i
 ```mermaid
 graph TD
     subgraph Navegador [Cliente Web - SPA]
-        A[index.html] -->|1. Carga inicial| B[main.js]
-        B -->|2. Arranca router| C[router/index.js]
-        C -->|3. Valida sesión| D[guards/auth.js]
+        A[index.html] -->|1. Carga inicial| B[principal.js]
+        B -->|2. Arranca router| C[enrutador/index.js]
+        C -->|3. Valida sesión| D[guards/autenticacion.js]
         D -->|4. Inyecta HTML| E[views/ Módulos de Pantallas]
-        E -->|5. Peticiones HTTP| F[services/api.js]
+        E -->|5. Peticiones HTTP| F[servicios/api.js]
       end
       subgraph Servidor [Backend de Datos]
         F <-->|Fetch asíncrono| G[json-server: Puerto 3000]
@@ -40,7 +40,7 @@ graph TD
 
 Cada pantalla del sistema reside en `client/src/views/` y exporta una función principal `render...` que recibe el contenedor principal del DOM.
 
-### 🔑 A. Vista de Login (`LoginView.js`)
+### 🔑 A. Vista de Login (`VistaLogin.js`)
 *   **Función:** Permite la entrada de usuarios autenticándose por su correo y contraseña.
 *   **Cómo funciona:**
     1.  Dibuja un formulario estilizado con temática de **Riwi Barranquilla** en pantalla dividida (split-screen).
@@ -49,7 +49,7 @@ Cada pantalla del sistema reside en `client/src/views/` y exporta una función p
     4.  Si el usuario existe, compara la contraseña en texto plano.
     5.  Si es correcta, llama a `setCurrentUser(user, rememberMe)` para registrar la sesión y redirige al Dashboard (si es `admin`) o a la Cartelera (si es `user`).
 
-### 📊 B. Vista de Dashboard (`DashboardView.js`)
+### 📊 B. Vista de Dashboard (`VistaDashboard.js`)
 *   **Función:** Muestra estadísticas en tiempo real y gráficos visuales sobre la taquilla.
 *   **Cómo funciona:**
     1.  Obtiene películas, salas, usuarios y reservas mediante peticiones paralelas (`Promise.all`).
@@ -58,7 +58,7 @@ Cada pantalla del sistema reside en `client/src/views/` y exporta una función p
     4.  **Ocupación de Salas:** Cruza las funciones en cartelera con la capacidad total de cada sala (`salas`), mostrando una barra indicadora que se colorea en rojo si la sala supera el 80% de ocupación.
     5.  **Actividad Reciente:** Ordena y expone en una tabla las últimas 5 reservas procesadas.
 
-### 🎬 C. Vista de Películas / Cartelera (`MoviesView.js`)
+### 🎬 C. Vista de Películas / Cartelera (`VistaPeliculas.js`)
 *   **Función:** Muestra el catálogo de películas y permite al Administrador programar funciones en salas específicas.
 *   **Cómo funciona:**
     1.  **Modo Cliente:** Renderiza tarjetas de películas con sus pósteres mapeados de alta calidad, salas asignadas, cupos de aforo e incluye un botón "Reservar".
@@ -66,20 +66,20 @@ Cada pantalla del sistema reside en `client/src/views/` y exporta una función p
     3.  **Prevención de Choques/Solapamiento:** Antes de guardar una nueva función, el código recorre en un bucle `for...of` todas las películas en cartelera. Compara si existe alguna función programada en la **misma sala (`salaId`), misma fecha (`fecha`) y mismo horario (`hora`)**. Si hay coincidencia, frena el flujo y muestra una alerta con `SweetAlert2`.
     4.  **Escritura Secuencial:** Para evitar colisiones en `json-server` al agregar horarios múltiples, el código realiza peticiones `POST` individuales de forma ordenada en un bucle utilizando `await` en cada paso.
 
-### 🍿 D. Vista de Salas (`RoomsView.js`)
+### 🍿 D. Vista de Salas (`VistaSalas.js`)
 *   **Función:** Permite al administrador crear, editar y eliminar salas físicas del cine.
 *   **Cómo funciona:**
     1.  Renderiza un listado con las especificaciones de cada sala: Nombre, Capacidad de asientos, Tipo (2D, 3D, IMAX) y Estado (Activa, En Mantenimiento).
     2.  Permite abrir un modal interactivo para crear o editar salas, validando que la capacidad no sea menor a cero antes de guardar la información en `/salas`.
 
-### 🎟️ E. Vista de Reservas (`ReservationsView.js`)
+### 🎟️ E. Vista de Reservas (`VistaReservas.js`)
 *   **Función:** Permite a los clientes comprar boletos y ver su historial, y a los administradores auditar todas las reservas.
 *   **Cómo funciona:**
     1.  **Filtros Interactivos:** Contiene un buscador dinámico por nombre de cliente y un filtro por estado de reserva (Confirmada, Pendiente, Cancelada).
     2.  **Integridad de Aforo (Proceso de Compra):** Al registrar una reserva, se verifica si hay suficientes `cupos_disponibles`. Si es así, se resta la cantidad del aforo, se actualiza la película con un método `PUT` en `/movies/:id` y luego se crea la reserva con un `POST` en `/reservations`.
     3.  **Proceso de Cancelación:** Si se cancela la reserva, se le devuelve el aforo a la película sumando los cupos correspondientes en el servidor.
 
-### 👥 F. Vista de Usuarios (`UsersView.js`)
+### 👥 F. Vista de Usuarios (`VistaUsuarios.js`)
 *   **Función:** Directorio administrativo y gestión de todas las cuentas registradas en el sistema.
 *   **Cómo funciona:**
     1.  **Métricas Rápidas:** Muestra tarjetas dinámicas con el total de usuarios, cuántos son administradores, cuántos clientes y la suma de boletos activos.
@@ -91,7 +91,7 @@ Cada pantalla del sistema reside en `client/src/views/` y exporta una función p
 
 ## 4. 🔗 Conexión Frontend-Backend (Consumo de la API REST)
 
-Toda la comunicación con el servidor de datos ocurre en `client/src/services/api.js` mediante la API `fetch` nativa del navegador.
+Toda la comunicación con el servidor de datos ocurre en `client/src/servicios/api.js` mediante la API `fetch` nativa del navegador.
 
 ### La Función Centralizada `request()`:
 Para no duplicar código, se creó una función genérica que maneja las cabeceras JSON, convierte las respuestas y captura errores:
@@ -132,7 +132,7 @@ La persistencia de datos se gestiona en dos niveles distintos:
 *   Cada vez que realizamos una petición `POST`, `PUT` o `DELETE`, `json-server` escribe directamente en el archivo `db.json`, asegurando que la información de las películas, salas, usuarios y reservas no se pierda al reiniciar la aplicación.
 
 ### B. Persistencia en el Cliente (Sesiones del Navegador):
-Se administra en `guards/auth.js` usando las APIs del navegador:
+Se administra en `guards/autenticacion.js` usando las APIs del navegador:
 *   **`localStorage`:** Si el usuario selecciona "Recordar sesión", guardamos sus datos aquí. Los datos persisten incluso después de cerrar y abrir el navegador.
 *   **`sessionStorage`:** Si no selecciona "Recordar sesión", se guarda aquí. La sesión se destruye automáticamente al cerrar la pestaña.
 
@@ -140,7 +140,7 @@ Se administra en `guards/auth.js` usando las APIs del navegador:
 
 ## 6. 🛡️ Seguridad y Control de Acceso (Guards)
 
-La seguridad está implementada del lado del cliente mediante un sistema de **Guardianes de Ruta** configurado en `guards/auth.js`.
+La seguridad está implementada del lado del cliente mediante un sistema de **Guardianes de Ruta** configurado en `guards/autenticacion.js`.
 
 ### El Mapa de Reglas (`routeRules`):
 Definimos los privilegios de cada ruta del sistema:

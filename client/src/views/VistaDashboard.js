@@ -1,7 +1,7 @@
-import { apiFetchReservations, apiFetchMovies, apiFetchUsers, apiFetchSalas } from '../services/api.js';
-import { showToast } from '../components/Toast.js';
-import { formatDate } from '../utils/helpers.js';
-import { getMoviePoster } from './MoviesView.js';
+import { apiFetchReservations, apiFetchMovies, apiFetchUsers, apiFetchSalas } from '../servicios/api.js';
+import { showToast } from '../components/Notificaciones.js';
+import { formatDate } from '../utils/utilidades.js';
+import { getMoviePoster } from './VistaPeliculas.js';
 
 /**
  * DIBUJAR PANEL DE CONTROL (DASHBOARD):
@@ -42,48 +42,55 @@ export async function renderDashboard(container) {
       }
     }
 
-    // 3. Agrupar ventas por película para el ranking
+    // 3. Agrupar ventas por película para el ranking (agrupando por título de película)
     const movieCounter = {};
+    
+    // Inicializar películas activas en cartelera con 0 ventas para tener un top completo
+    for (const m of movies) {
+      if (m.estado !== 'Cancelada') {
+        movieCounter[m.pelicula] = 0;
+      }
+    }
+
+    // Acumular las ventas de las reservas que no estén canceladas
     for (const res of reservations) {
       if (res.estado !== 'Cancelada' && res.funcion_seleccionada) {
-        const movieId = res.funcion_seleccionada.pelicula_id;
+        const title = res.funcion_seleccionada.titulo;
         const quantity = Number(res.cantidad_entradas) || 0;
 
-        if (!movieCounter[movieId]) {
-          movieCounter[movieId] = 0;
+        if (movieCounter[title] === undefined) {
+          movieCounter[title] = 0;
         }
-        movieCounter[movieId] += quantity;
+        movieCounter[title] += quantity;
       }
     }
 
     // Convertir el contador a un arreglo para ordenar y hacer el ranking
     const rankingArray = [];
-    for (const mId of Object.keys(movieCounter)) {
-      const movieObj = movies.find(m => Number(m.id) === Number(mId));
-      if (movieObj) {
-        rankingArray.push({
-          id: mId,
-          title: movieObj.pelicula,
-          tickets: movieCounter[mId],
-          poster: getMoviePoster(movieObj.pelicula, movieObj.imagen_url),
-          sala: movieObj.sala
-        });
-      }
+    for (const title of Object.keys(movieCounter)) {
+      // Buscamos una función activa para obtener la imagen y la sala asociadas
+      const movieObj = movies.find(m => m.pelicula === title && m.estado !== 'Cancelada') || movies.find(m => m.pelicula === title);
+      rankingArray.push({
+        title: title,
+        tickets: movieCounter[title],
+        poster: getMoviePoster(title, movieObj ? movieObj.imagen : undefined),
+        sala: movieObj ? movieObj.sala : 'N/A'
+      });
     }
 
     // Ordenar de mayor a menor ventas
     rankingArray.sort((a, b) => b.tickets - a.tickets);
 
-    // Obtener la película más popular (Mejor vendida)
-    const bestSeller = rankingArray[0] || null;
+    // Obtener la película más popular (Mejor vendida, requiere al menos 1 venta)
+    const bestSeller = rankingArray[0] && rankingArray[0].tickets > 0 ? rankingArray[0] : null;
 
     // 4. Calcular ocupación de aforo por Sala (Sala uno, Sala dos...)
     const occupancyBySala = [];
     for (const s of salas) {
       let seatsBooked = 0;
-      // Contamos boletos de funciones programadas en esta sala
+      // Contamos boletos de funciones programadas en esta sala (excluyendo canceladas)
       for (const m of movies) {
-        if (Number(m.salaId) === Number(s.id)) {
+        if (Number(m.salaId) === Number(s.id) && m.estado !== 'Cancelada') {
           const sold = s.capacidad - m.cupos_disponibles;
           if (sold > 0) {
             seatsBooked += sold;
@@ -126,7 +133,7 @@ export async function renderDashboard(container) {
         <!-- Tarjetas de Métricas Principales (Grid 4 col) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <!-- Total Boletos Vendidos -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+          <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md flex items-center gap-4">
             <div class="bg-indigo-500/10 text-indigo-400 p-3.5 rounded-xl text-xl shrink-0">🎟️</div>
             <div>
               <span class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Entradas Vendidas</span>
@@ -135,7 +142,7 @@ export async function renderDashboard(container) {
           </div>
 
           <!-- Películas Activas en Cartelera -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+          <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md flex items-center gap-4">
             <div class="bg-sky-500/10 text-sky-400 p-3.5 rounded-xl text-xl shrink-0">🎬</div>
             <div>
               <span class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">En Cartelera</span>
@@ -144,7 +151,7 @@ export async function renderDashboard(container) {
           </div>
 
           <!-- Total Usuarios Registrados -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+          <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md flex items-center gap-4">
             <div class="bg-purple-500/10 text-purple-400 p-3.5 rounded-xl text-xl shrink-0">👥</div>
             <div>
               <span class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Usuarios Activos</span>
@@ -153,7 +160,7 @@ export async function renderDashboard(container) {
           </div>
 
           <!-- Relación Confirmadas vs Pendientes -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+          <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md flex items-center gap-4">
             <div class="bg-emerald-500/10 text-emerald-400 p-3.5 rounded-xl text-xl shrink-0">✅</div>
             <div>
               <span class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Confirmadas / Pend.</span>
@@ -166,7 +173,7 @@ export async function renderDashboard(container) {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           <!-- LADO IZQUIERDO: Película Más Taquillera (Mejor Vendida) -->
-          <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between lg:col-span-1">
+          <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md flex flex-col justify-between lg:col-span-1">
             <div>
               <h3 class="text-base font-bold text-white mb-1">Película Más Vendida</h3>
               <p class="text-[11px] text-slate-400 mb-4">Filme líder en reserva de boletos de CineRiwi</p>
@@ -207,7 +214,7 @@ export async function renderDashboard(container) {
           <!-- LADO DERECHO: Ranking de Películas & Aforo de Salas -->
           <div class="lg:col-span-2 space-y-6">
             <!-- Bloque: Ranking de Películas (Cartelera Taquillera) -->
-            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md space-y-4">
               <div>
                 <h3 class="text-base font-bold text-white mb-1">Cartelera Taquillera</h3>
                 <p class="text-[11px] text-slate-400">Venta acumulada de boletos en las películas activas</p>
@@ -215,7 +222,7 @@ export async function renderDashboard(container) {
 
               <div class="space-y-4">
                 ${rankingArray.length > 0 ? rankingArray.slice(0, 3).map((item, index) => {
-                  const maxTickets = bestSeller ? bestSeller.tickets : 100;
+                  const maxTickets = bestSeller && bestSeller.tickets > 0 ? bestSeller.tickets : 1;
                   const percentage = Math.round((item.tickets / maxTickets) * 100);
                   
                   // Colores de barras
@@ -244,7 +251,7 @@ export async function renderDashboard(container) {
             </div>
 
             <!-- Bloque: Aforo de Salas -->
-            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md space-y-4">
               <div>
                 <h3 class="text-base font-bold text-white mb-1">Ocupación por Salas</h3>
                 <p class="text-[11px] text-slate-400">Monitoreo de asientos reservados respecto a la capacidad de cada sala</p>
@@ -283,7 +290,7 @@ export async function renderDashboard(container) {
         </div>
 
         <!-- SECCIÓN: Historial de Reservas Recientes -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+        <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md space-y-4">
           <div>
             <h3 class="text-base font-bold text-white mb-1">Últimas Reservas en Sistema</h3>
             <p class="text-[11px] text-slate-400">Lista detallada de las transacciones procesadas recientemente en taquilla</p>
@@ -315,7 +322,7 @@ export async function renderDashboard(container) {
                     <tr class="hover:bg-slate-800/10 transition-colors">
                       <td class="px-4 py-3 font-mono font-bold text-slate-500">#${res.id}</td>
                       <td class="px-4 py-3 font-semibold text-slate-200">${res.usuario}</td>
-                      <td class="px-4 py-3">${res.funcion_seleccionada ? res.funcion_seleccionada.pelicula : 'N/A'}</td>
+                      <td class="px-4 py-3">${res.funcion_seleccionada ? res.funcion_seleccionada.titulo : 'N/A'}</td>
                       <td class="px-4 py-3 font-extrabold text-indigo-400">${res.cantidad_entradas} boletos</td>
                       <td class="px-4 py-3">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${badgeClass}">
