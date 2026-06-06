@@ -80,10 +80,12 @@ Cada pantalla del sistema reside en `client/src/views/` y exporta una función p
     3.  **Proceso de Cancelación:** Si se cancela la reserva, se le devuelve el aforo a la película sumando los cupos correspondientes en el servidor.
 
 ### 👥 F. Vista de Usuarios (`UsersView.js`)
-*   **Función:** Listado administrativo de todas las cuentas creadas.
+*   **Función:** Directorio administrativo y gestión de todas las cuentas registradas en el sistema.
 *   **Cómo funciona:**
-    1.  Muestra tarjetas rápidas con el total de usuarios, cuántos son administradores, cuántos clientes y cuántos boletos en total se han vendido.
-    2.  Calcula de manera dinámica la cantidad acumulada de boletos reservados por cada cliente, cruzando los datos del usuario con sus compras reales.
+    1.  **Métricas Rápidas:** Muestra tarjetas dinámicas con el total de usuarios, cuántos son administradores, cuántos clientes y la suma de boletos activos.
+    2.  **Registro de Usuarios (Creación):** Incorpora un botón `➕ Registrar Usuario` que abre un formulario modal interactivo para crear cuentas directamente (Admin o Cliente) ingresando Nombre, Correo, Contraseña y Rol, verificando previamente que el correo no esté duplicado.
+    3.  **Actualización de Privilegios (Rol):** El botón `🔄 Cambiar Rol` permite al administrador cambiar el rol del usuario de cliente a administrador (o viceversa) con confirmación interactiva.
+    4.  **Eliminación Segura:** El botón `🗑️ Eliminar` permite purgar una cuenta del sistema, validando antes mediante la sesión que el administrador activo no pueda eliminarse a sí mismo.
 
 ---
 
