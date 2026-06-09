@@ -19,7 +19,7 @@ Este documento es tu **hoja de ruta oficial para obtener la máxima calificació
 Una **SPA** es una aplicación web que se carga una sola vez en el navegador (`index.html`). Cuando el usuario hace clic en los enlaces o navega, el navegador **no recarga la pestaña**. En su lugar, JavaScript intercepta el cambio de URL y redibuja la sección central del DOM.
 
 ### Flujo de Ejecución al Arrancar la Aplicación:
-```mermaid
+
 graph TD
     subgraph Navegador [Cliente Web - SPA]
         A[index.html] -->|1. Carga inicial| B[principal.js]
@@ -54,8 +54,13 @@ Cada pantalla del sistema reside en `client/src/views/` y exporta una función p
 *   **Cómo funciona:**
     1.  Obtiene películas, salas, usuarios y reservas mediante peticiones paralelas (`Promise.all`).
     2.  **Cálculo de Métricas:** Con un bucle `for...of` sobre las reservas calcula boletos vendidos, reservas confirmadas y pendientes.
-    3.  **Gráfico de Barras Nivel Estudiante:** Agrupa los boletos por película en un objeto clave-valor, los ordena y renderiza un ranking de las 3 películas más vendidas. Utiliza etiquetas `div` de Tailwind CSS con anchos porcentuales dinámicos (`style="width: ${percentage}%"`) para emular un gráfico de barras interactivo sin usar librerías externas.
-    4.  **Ocupación de Salas:** Cruza las funciones en cartelera con la capacidad total de cada sala (`salas`), mostrando una barra indicadora que se colorea en rojo si la sala supera el 80% de ocupación.
+    3.  **Lógica del Gráfico Estadístico de Barras (Nivel Estudiante):**
+        *   **Acumulación:** Recorremos las reservas no canceladas sumando la cantidad de entradas vendidas por cada película en un objeto acumulador (`movieCounter`).
+        *   **Clasificación:** Convertimos ese objeto en un arreglo y lo ordenamos con `.sort()` de mayor a menor según el total de entradas vendidas.
+        *   **Cálculo Porcentual Dinámico:** Para representar visualmente los valores como barras horizontales, tomamos como base (100%) la película con mayores ventas (`bestSeller`). Para cada una de las otras películas calculamos su porcentaje proporcional:
+            $$\text{porcentaje} = \left( \frac{\text{entradas de película}}{\text{entradas de la película más vendida}} \right) \times 100$$
+        *   **Renderizado de la Barra:** En lugar de usar pesadas librerías externas de gráficos (como Chart.js o Canvas), utilizamos etiquetas HTML `div` anidadas: un contenedor que sirve de fondo y una barra interna de color con un estilo en línea dinámico (`style="width: ${percentage}%"`). Al combinarlo con clases de transición de Tailwind CSS (`transition-all duration-500`), la barra se anima y expande suavemente al cargar.
+    4.  **Ocupación de Salas:** Cruza las funciones en cartelera con la capacidad total de cada sala (`salas`), calculando el porcentaje de ocupación actual. Muestra una barra indicadora con un condicional interactivo que cambia el color de la barra (de verde `bg-emerald-500` a rojo/rosa `bg-rose-500` si la sala supera el 80% de su capacidad total).
     5.  **Actividad Reciente:** Ordena y expone en una tabla las últimas 5 reservas procesadas.
 
 ### 🎬 C. Vista de Películas / Cartelera (`VistaPeliculas.js`)
@@ -178,6 +183,26 @@ Cada vez que el usuario navega a una ruta en el enrutador:
 
 ### ❓ Pregunta 4: ¿Por qué se utilizó un bucle secuencial en lugar de `Promise.all` al guardar horarios múltiples?
 > **Respuesta:** *"Debido a que `json-server` almacena los datos en un único archivo físico (`db.json`), si intentamos realizar varias escrituras simultáneas con `Promise.all`, el servidor choca consigo mismo al intentar escribir en el disco al mismo tiempo, lo que corrompe el archivo. Para solucionarlo, usamos un bucle `for...of` con `await` para forzar una escritura secuencial y ordenada en el disco del servidor."*
+
+### ❓ Pregunta 5: ¿Cómo construiste los gráficos de estadísticas (barras de taquilla y ocupación de salas) sin usar librerías como Chart.js?
+> **Respuesta:** *"Para mantener la aplicación ligera, evitar dependencias externas que puedan fallar en la carga y demostrar habilidades sólidas en HTML y CSS puro, creé los gráficos de forma nativa en el DOM.
+> 1. Agrupo y sumo los datos en memoria con JavaScript estructurado.
+> 2. Calculo un porcentaje proporcional para cada elemento comparando su valor con el valor máximo.
+> 3. Renderizo barras de progreso horizontales usando elementos `<div>` anidados. La barra interna tiene un estilo CSS en línea dinámico (`style="width: ${percentage}%"`) y clases de Tailwind CSS (`transition-all duration-500`) que animan suavemente su ancho en pantalla al cargar la vista."*
+
+### ❓ Pregunta 6: ¿Cómo funciona el enrutamiento de tu SPA y qué ocurre si el usuario presiona F5 o recarga la página?
+> **Respuesta:** *"El enrutamiento está basado en Hash (`#/dashboard`, `#/movies`, etc.). Esto nos permite cambiar de vista interceptando el evento `hashchange` en la ventana del navegador (`window.addEventListener('hashchange', ...)`). 
+> Si el usuario presiona F5, se dispara el evento `DOMContentLoaded`. El enrutador detecta el hash actual en la URL (`window.location.hash`) y renderiza la pantalla correspondiente de forma inmediata. Al usar hashes, evitamos que el navegador haga una petición real al servidor buscando una ruta física inexistente, lo que prevendría un error 404."*
+
+### ❓ Pregunta 7: Si un usuario altera manualmente el `localStorage` para cambiarse el rol a `admin`, ¿cómo previenes que acceda a información confidencial?
+> **Respuesta:** *"En el desarrollo web moderno, la seguridad en el Frontend mediante Guardianes (Guards) es únicamente para mejorar la experiencia de usuario (UX) e impedir accesos accidentales en la interfaz. La seguridad real debe estar en el Backend (API).
+> En un entorno real de producción, cada petición HTTP debe enviar un token seguro de sesión (como un JWT) firmado por el servidor. Si el usuario altera su rol en el navegador de manera fraudulenta, el Frontend lo dejará ver los menús de administrador, pero cuando intente obtener los datos, el servidor rechazará la petición HTTP retornando un código de error `401 Unauthorized` o `403 Forbidden` al no poseer una firma válida."*
+
+### ❓ Pregunta 8: ¿Por qué utilizas módulos de ES6 (`type="module"`) y cómo beneficia al proyecto en equipo?
+> **Respuesta:** *"El uso de módulos de ES6 (`import`/`export`) encapsula el alcance (scope) de las variables de cada archivo. En proyectos antiguos de JavaScript, todo se cargaba en el espacio global del navegador, lo que provocaba que una variable con el mismo nombre en dos archivos distintos generara colisiones e inconsistencias difíciles de rastrear. Con los módulos de ES6, cada archivo es un contenedor aislado y solo expone las funciones o variables necesarias, lo que hace el código reutilizable y escalable."*
+
+### ❓ Pregunta 9: ¿Cómo manejas el flujo de datos asíncronos y qué ocurre si el servidor de la API se cae?
+> **Respuesta:** *"Utilizamos la sintaxis moderna de `async/await` para hacer el código asíncrono legible y secuencial. Cada petición a la API está envuelta en un bloque `try/catch`. Si el servidor está apagado o hay un fallo de red, la promesa de `fetch` es rechazada y el flujo entra en el bloque `catch`. Allí atrapamos el error y disparamos notificaciones visuales controladas (usando Toasts o SweetAlert2) para advertir al usuario con gracia sobre el problema técnico, en lugar de romper o congelar la interfaz."*
 
 ---
 
